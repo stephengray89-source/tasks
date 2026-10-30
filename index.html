@@ -239,7 +239,6 @@ dialog a { color: var(--ink); font-weight: 600; }
   .dmy { margin-top: 0; }
   .list { min-height: 44px; padding-bottom: 6px; }
   .col.later { padding: 0 4px 4px; }
-  .sync .label { display: none; }
 }
 @media (hover: none) {
   .task:hover { background: transparent; }
@@ -265,9 +264,6 @@ dialog a { color: var(--ink); font-weight: 600; }
     <button class="btn sync" id="syncBtn" data-state="local" title="Sync settings"><span class="dot"></span><span class="label" id="syncText">Not synced</span></button>
     <button class="btn icon" id="helpBtn" aria-label="Help" title="Help">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.5"/><path d="M7.9 7.6a2.2 2.2 0 0 1 4.2.9c0 1.5-2.1 1.9-2.1 3.2"/><circle cx="10" cy="14.3" r=".4" fill="currentColor"/></svg>
-    </button>
-    <button class="btn icon" id="settingsBtn" aria-label="Sync settings" title="Sync settings">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.6"/><path d="M10 1.8v2.4M10 15.8v2.4M18.2 10h-2.4M4.2 10H1.8M15.8 4.2l-1.7 1.7M5.9 14.1l-1.7 1.7M15.8 15.8l-1.7-1.7M5.9 5.9 4.2 4.2"/></svg>
     </button>
   </div>
 </header>
@@ -426,7 +422,11 @@ dialog a { color: var(--ink); font-weight: 600; }
     dirty.set(id, ++seq);
     changed();
   }
-  function changed() { saveLocal(); render(); queueSync(600); }
+  function changed() {
+    saveLocal();
+    render();
+    if (cfg) { setStatus('busy'); queueSync(600); }
+  }
 
   function addTask(text, date) {
     text = text.replace(/\s+/g, ' ').trim();
@@ -930,7 +930,6 @@ dialog a { color: var(--ink); font-weight: 600; }
     if (!cfg) $('#tokenInput').focus();
   }
   $('#syncBtn').onclick = openSettings;
-  $('#settingsBtn').onclick = openSettings;
   $('#closeSettings').onclick = () => settings.close();
   $('#helpBtn').onclick = () => $('#help').showModal();
   $('#closeHelp').onclick = () => $('#help').close();
