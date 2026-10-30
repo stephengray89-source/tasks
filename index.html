@@ -70,26 +70,26 @@ button { font: inherit; color: inherit; }
 .top {
   position: sticky; top: 0; z-index: 20;
   background: var(--paper);
-  padding: max(18px, env(safe-area-inset-top)) 0 16px;
+  padding: max(14px, env(safe-area-inset-top)) 0 12px;
 }
-.top-row { display: flex; align-items: center; gap: 8px; }
+.top-row { display: flex; align-items: center; gap: 6px; }
 .capture-wrap { position: relative; flex: 1; min-width: 0; }
 .capture {
   display: flex; align-items: center; gap: 10px;
-  height: 54px; padding: 0 6px 0 16px;
+  height: 48px; padding: 0 4px 0 14px;
   border: 1.5px solid var(--line); border-radius: 12px; background: var(--paper);
 }
 .capture:focus-within { border-color: var(--ink); }
-.capture .plus { flex: none; width: 20px; text-align: center; color: var(--mute); font-size: 24px; line-height: 1; font-weight: 400; }
+.capture .plus { flex: none; width: 20px; text-align: center; color: var(--mute); font-size: 22px; line-height: 1; font-weight: 400; }
 .capture:focus-within .plus { color: var(--ink); }
 #entry {
   flex: 1; min-width: 0; height: 100%; padding: 0;
   border: 0; outline: 0; background: transparent;
-  font: inherit; font-size: 17px; font-weight: 500; color: var(--ink);
+  font: inherit; font-size: 16px; font-weight: 500; color: var(--ink);
 }
 #entry::placeholder { color: var(--mute); opacity: 1; }
 .when {
-  flex: none; height: 40px; padding: 0 10px; border: 0; border-radius: 9px;
+  flex: none; height: 38px; padding: 0 10px; border: 0; border-radius: 9px;
   background: transparent; color: var(--slate); cursor: pointer;
   display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700;
 }
@@ -123,69 +123,75 @@ button { font: inherit; color: inherit; }
 .btn.icon { padding: 0; width: 40px; color: var(--slate); }
 .btn.icon:hover { color: var(--ink); }
 .btn svg { width: 19px; height: 19px; }
-.sync { color: var(--slate); font-weight: 500; font-size: 14px; flex: none; }
-.sync .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mute); flex: none; }
-.sync[data-state="ok"] .dot { background: var(--ink); }
-.sync[data-state="busy"] .dot { background: var(--slate); }
+/* Settings button with a sync light; words only when something needs attention */
+.sync { flex: none; height: 44px; min-width: 44px; padding: 0 10px; color: var(--slate); font-weight: 600; font-size: 14px; gap: 6px; }
+.sync .ico { position: relative; display: inline-flex; }
+.sync svg { width: 22px; height: 22px; }
+.sync .dot {
+  position: absolute; top: -3px; right: -4px; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--mute); box-shadow: 0 0 0 2px var(--paper);
+}
+.sync[data-state="ok"] .dot, .sync[data-state="busy"] .dot { display: none; }
 .sync[data-state="error"] { color: var(--danger); }
 .sync[data-state="error"] .dot { background: var(--danger); }
+.sync .label { display: none; }
+.sync[data-state="local"] .label, .sync[data-state="error"] .label, .sync[data-state="offline"] .label { display: inline; }
 
 /* Two views, switched by the tab bar: Today, and Upcoming (only days with something on) */
-.main { display: block; padding-bottom: 150px; }
+.main { display: block; padding-bottom: 120px; }
 body[data-view="today"] .up-pane, body[data-view="upcoming"] .today-pane { display: none; }
-.today-head {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-  background: var(--band); color: var(--band-ink);
-  border-radius: 12px; padding: 16px 18px 15px; margin-bottom: 8px;
+.today-head, .up-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border-radius: 12px; padding: 13px 16px; margin-bottom: 4px;
 }
-.today-head h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
-.today-head .date { font-size: 15px; font-weight: 500; opacity: .75; margin-top: 3px; }
-.today-head .count { font-size: 15px; font-weight: 700; opacity: .85; white-space: nowrap; }
-.up-head {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-  background: var(--wash); border-radius: 12px; padding: 16px 18px 15px; margin-bottom: 12px;
-}
-.up-head h2 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
-.up-head .date { font-size: 15px; font-weight: 500; color: var(--slate); margin-top: 3px; }
-.up-head .count { font-size: 15px; font-weight: 700; color: var(--slate); white-space: nowrap; }
+.today-head { background: var(--band); color: var(--band-ink); }
+.up-head { background: var(--wash); }
+.today-head h1, .up-head h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.15; }
+.today-head .date, .up-head .date { font-size: 14px; font-weight: 500; margin-top: 1px; }
+.today-head .date { opacity: .75; }
+.up-head .date { color: var(--slate); }
+.today-head .count, .up-head .count { font-size: 14px; font-weight: 700; white-space: nowrap; }
+.today-head .count { opacity: .85; }
+.up-head .count { color: var(--slate); }
 
 .list { display: flex; flex-direction: column; min-height: 8px; position: relative; }
-#todayList { min-height: 60px; padding-bottom: 24px; }
-#upcoming:not(:has(.group))::before { content: "Nothing planned yet. Add a day to a task and it shows here."; display: block; color: var(--slate); padding: 10px 12px; font-size: 16px; }
+#todayList { min-height: 44px; padding-bottom: 16px; }
+#upcoming:not(:has(.group))::before { content: "Nothing planned yet. Add a day to a task and it shows here."; display: block; color: var(--slate); padding: 12px; font-size: 15px; }
 
 /* Shown when nothing is left today */
-.caught { text-align: center; padding: 40px 16px 24px; }
-.caught svg { width: 56px; height: 56px; color: var(--ink); }
+.caught { text-align: center; padding: 36px 16px 16px; }
+.caught svg { width: 48px; height: 48px; color: var(--ink); }
 .caught svg .cut { stroke: var(--paper); }
-.caught h2 { margin: 14px 0 4px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+.caught h2 { margin: 12px 0 4px; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
 .caught p { margin: 0; font-size: 15px; color: var(--slate); }
 .caught .next {
-  margin-top: 14px; height: 40px; padding: 0 16px; border: 1.5px solid var(--line); border-radius: 999px;
-  background: var(--paper); color: var(--ink); font-size: 15px; font-weight: 700; cursor: pointer;
+  margin-top: 14px; height: 38px; padding: 0 16px; border: 1.5px solid var(--line); border-radius: 999px;
+  background: var(--paper); color: var(--ink); font-size: 14px; font-weight: 700; cursor: pointer;
 }
 .caught .next:hover { background: var(--wash); }
 
-/* Floating view switcher */
+/* Floating view switcher, sized like a native tab bar */
 .tabbar {
   position: fixed; left: 50%; transform: translateX(-50%);
-  bottom: max(16px, env(safe-area-inset-bottom));
-  z-index: 30; display: flex; gap: 4px; padding: 6px;
-  width: min(340px, calc(100vw - 32px));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 30; display: flex; gap: 2px; padding: 4px;
+  width: min(272px, calc(100vw - 48px));
   background: var(--paper); border-radius: 999px;
-  box-shadow: 0 10px 30px rgba(4, 30, 66, .16), 0 0 0 1px var(--line);
+  box-shadow: 0 6px 20px rgba(4, 30, 66, .12), 0 0 0 1px var(--line);
 }
 .tab {
-  flex: 1; height: 64px; padding: 0; border: 0; border-radius: 999px; background: transparent;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  color: var(--slate); font-size: 14px; font-weight: 600; cursor: pointer;
+  flex: 1; height: 52px; padding: 0; border: 0; border-radius: 999px; background: transparent;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: var(--slate); font-size: 12px; font-weight: 600; line-height: 1.2; cursor: pointer;
 }
-.tab svg { width: 28px; height: 28px; }
+.tab svg { width: 24px; height: 24px; }
 .tab svg .cut { fill: var(--paper); }
-.tab[aria-current="page"] { background: var(--wash); color: var(--ink); font-weight: 800; }
+.tab[aria-current="page"] { background: var(--wash); color: var(--ink); font-weight: 700; }
 body.dragging .tabbar { display: none; }
-.group { margin-bottom: 18px; }
-.group-head { display: flex; align-items: baseline; gap: 10px; padding: 6px 12px 4px; }
-.group-head .gd { font-size: 17px; font-weight: 800; }
+
+.group { margin-bottom: 4px; }
+.group-head { display: flex; align-items: baseline; gap: 8px; padding: 16px 12px 4px; }
+.group-head .gd { font-size: 16px; font-weight: 800; }
 .group-head .gs { font-size: 14px; font-weight: 500; color: var(--slate); }
 
 /* A task is a sliding face over an action layer (revealed by swiping) */
@@ -197,13 +203,13 @@ body.dragging .tabbar { display: none; }
 .face {
   position: relative; z-index: 1;
   display: flex; align-items: flex-start; gap: 12px;
-  padding: 8px 8px 8px 12px; border-radius: 9px;
+  min-height: 44px; padding: 11px 8px 11px 12px; border-radius: 9px;
   background: var(--paper);
 }
 @media (hover: hover) { .task:hover .face { background: var(--wash); } }
 /* Faint rule under each task */
 .face::after {
-  content: ""; position: absolute; left: 12px; right: 8px; bottom: 0;
+  content: ""; position: absolute; left: 46px; right: 0; bottom: 0;
   height: 1px; background: var(--rule); pointer-events: none;
 }
 .task.swiping .face::after, .drag-clone .face::after, .task.editing .face::after { display: none; }
@@ -225,7 +231,7 @@ body.dragging .tabbar { display: none; }
 .task.swipe-right.armed .under { background: var(--sky); color: var(--ink); }
 .task.swipe-right.full .under { background: var(--ink); color: var(--paper); }
 .check {
-  flex: none; width: 21px; height: 21px; margin-top: 1px; padding: 0;
+  flex: none; width: 22px; height: 22px; margin-top: 0; padding: 0;
   border: 2px solid var(--mute); border-radius: 50%; background: transparent;
   display: grid; place-items: center; cursor: pointer;
 }
@@ -235,16 +241,16 @@ body.dragging .tabbar { display: none; }
 .task.done .check svg { opacity: 1; }
 .text {
   flex: 1; min-width: 0;
-  font-size: 16px; font-weight: 500; line-height: 1.4;
+  font-size: 16px; font-weight: 500; line-height: 22px;
   overflow-wrap: anywhere; white-space: pre-wrap; outline: none; cursor: text;
 }
 .task.done .text { color: var(--mute); text-decoration: line-through; }
 .task.editing { cursor: auto; }
 .task.editing .face { background: var(--wash); }
 .task.editing .text { -webkit-user-select: text; user-select: text; }
-.since { flex: none; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--slate); white-space: nowrap; }
+.since { flex: none; line-height: 22px; font-size: 13px; font-weight: 500; color: var(--slate); white-space: nowrap; }
 .late {
-  flex: none; margin-top: 0; padding: 2px 8px; border-radius: 6px;
+  flex: none; margin-top: 1px; padding: 1px 8px; line-height: 18px; border-radius: 6px;
   background: var(--sky); color: var(--ink);
   font-size: 13px; font-weight: 700; white-space: nowrap;
 }
@@ -252,7 +258,7 @@ body.dragging .tabbar { display: none; }
 
 /* Row buttons float over the end of the row on hover, and sit inline while editing */
 .acts {
-  position: absolute; right: 6px; top: 4px;
+  position: absolute; right: 6px; top: 7px;
   display: none; gap: 2px; border-radius: 7px;
   background: var(--wash); box-shadow: -14px 0 10px -4px var(--wash);
 }
@@ -326,7 +332,7 @@ body.dragging .dropbar { display: flex; }
 
 /* Toast */
 .toast {
-  position: fixed; left: 50%; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 90px); transform: translate(-50%, 12px);
+  position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 74px); transform: translate(-50%, 12px);
   z-index: 70; display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 32px);
   padding: 11px 16px; border-radius: 11px; background: var(--ink); color: var(--paper);
   font-size: 15px; font-weight: 600; box-shadow: var(--shadow);
@@ -376,14 +382,15 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
 /* Phone */
 @media (max-width: 760px) {
   .wrap { padding: 0 16px; }
-  .top { padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: 12px; }
-  .top-row { gap: 2px; }
-  .capture { height: 50px; padding-left: 12px; }
-  #entry { font-size: 16px; }
+  .top-row { gap: 4px; }
   .when .lbl { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .sync[data-state="ok"] .label, .sync[data-state="busy"] .label { display: none; }
-  .today-head h1, .up-head h2 { font-size: 24px; }
   .chip { min-width: 58px; height: 46px; padding: 0 10px; font-size: 14px; }
+}
+@media (min-width: 761px) {
+  .top { padding-top: 20px; padding-bottom: 14px; }
+  .capture { height: 52px; }
+  .today-head, .up-head { padding: 15px 18px; }
+  .today-head h1, .up-head h2 { font-size: 26px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .toast { transition: none; }
@@ -405,9 +412,9 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
       </div>
       <div class="preview" id="preview" hidden></div>
     </div>
-    <button class="btn sync" id="syncBtn" data-state="local" title="Sync settings"><span class="dot"></span><span class="label" id="syncText">Not synced</span></button>
-    <button class="btn icon" id="helpBtn" aria-label="Help" title="Help">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.5"/><path d="M7.9 7.6a2.2 2.2 0 0 1 4.2.9c0 1.5-2.1 1.9-2.1 3.2"/><circle cx="10" cy="14.3" r=".4" fill="currentColor"/></svg>
+    <button class="btn sync" id="syncBtn" data-state="local" title="Settings" aria-label="Settings">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="dot"></span></span>
+      <span class="label" id="syncText">Not synced</span>
     </button>
   </div>
 </header>
@@ -500,7 +507,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     </div>
     <div class="row"><span class="spacer"></span><button class="btn primary" id="badgeBtn" type="button">Turn on</button></div>
   </div>
-  <div class="row close-row"><span class="spacer"></span><button class="btn" id="closeSettings" type="button">Close</button></div>
+  <div class="row close-row"><button class="btn quiet" id="helpBtn" type="button">How it works</button><span class="spacer"></span><button class="btn" id="closeSettings" type="button">Close</button></div>
 </dialog>
 
 <dialog id="help" aria-labelledby="helpTitle">
@@ -1203,6 +1210,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     const tag = (e.target.tagName || '').toLowerCase();
     if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable || document.querySelector('dialog[open]') || !pop.hidden) return;
     if (e.key === 'n' || e.key === 'N' || e.key === '/') { e.preventDefault(); entry.focus(); }
+    else if (e.key === '?') $('#help').showModal();
     else if (e.key === 't' || e.key === 'T') setView('today');
     else if (e.key === 'u' || e.key === 'U') setView('upcoming');
   });
@@ -1543,7 +1551,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
   }
   $('#syncBtn').onclick = openSettings;
   $('#closeSettings').onclick = () => settings.close();
-  $('#helpBtn').onclick = () => $('#help').showModal();
+  $('#helpBtn').onclick = () => { settings.close(); $('#help').showModal(); };
   $('#closeHelp').onclick = () => $('#help').close();
   [settings, $('#help')].forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
 
