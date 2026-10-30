@@ -24,6 +24,7 @@
   --slate: #55657B;
   --mute: #98A4B5;
   --line: #DFE5ED;
+  --rule: #E7ECF2;
   --sky: #D6E3F3;
   --band: #041E42;
   --band-ink: #FFFFFF;
@@ -39,6 +40,7 @@
     --slate: #A4B2C5;
     --mute: #66778F;
     --line: #1F3352;
+    --rule: #182A44;
     --sky: #1D3658;
     --band: #D6E3F3;
     --band-ink: #041E42;
@@ -166,6 +168,12 @@ button { font: inherit; color: inherit; }
   background: var(--paper);
 }
 @media (hover: hover) { .task:hover .face { background: var(--wash); } }
+/* Faint rule under each task */
+.face::after {
+  content: ""; position: absolute; left: 12px; right: 8px; bottom: 0;
+  height: 1px; background: var(--rule); pointer-events: none;
+}
+.task.swiping .face::after, .drag-clone .face::after, .task.editing .face::after { display: none; }
 .under {
   position: absolute; inset: 0; border-radius: 9px;
   display: none; align-items: center; justify-content: space-between;
