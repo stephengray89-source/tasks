@@ -28,7 +28,7 @@
   --band: #041E42;
   --band-ink: #FFFFFF;
   --danger: #B42318;
-  --shadow: 0 10px 28px rgba(4, 30, 66, .18);
+  --shadow: 0 12px 32px rgba(4, 30, 66, .16);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -43,7 +43,7 @@
     --band: #D6E3F3;
     --band-ink: #041E42;
     --danger: #F2877D;
-    --shadow: 0 10px 28px rgba(0, 0, 0, .45);
+    --shadow: 0 12px 32px rgba(0, 0, 0, .5);
     color-scheme: dark;
   }
 }
@@ -62,69 +62,107 @@ body {
 button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-/* Top bar */
-.bar {
-  position: sticky; top: 0; z-index: 10;
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px 24px 10px;
-  padding-top: max(14px, env(safe-area-inset-top));
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+/* Top: the one place to add tasks */
+.top {
+  position: sticky; top: 0; z-index: 20;
   background: var(--paper);
+  padding: max(18px, env(safe-area-inset-top)) 0 16px;
 }
-.nav, .tools { display: flex; align-items: center; gap: 4px; }
+.top-row { display: flex; align-items: center; gap: 8px; }
+.capture-wrap { position: relative; flex: 1; min-width: 0; }
+.capture {
+  display: flex; align-items: center; gap: 10px;
+  height: 54px; padding: 0 6px 0 16px;
+  border: 1.5px solid var(--line); border-radius: 12px; background: var(--paper);
+}
+.capture:focus-within { border-color: var(--ink); }
+.capture .plus { flex: none; width: 20px; text-align: center; color: var(--mute); font-size: 24px; line-height: 1; font-weight: 400; }
+.capture:focus-within .plus { color: var(--ink); }
+#entry {
+  flex: 1; min-width: 0; height: 100%; padding: 0;
+  border: 0; outline: 0; background: transparent;
+  font: inherit; font-size: 17px; font-weight: 500; color: var(--ink);
+}
+#entry::placeholder { color: var(--mute); opacity: 1; }
+.when {
+  flex: none; height: 40px; padding: 0 10px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--slate); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700;
+}
+.when:hover { background: var(--wash); color: var(--ink); }
+.when.set { background: var(--sky); color: var(--ink); }
+.when svg { width: 18px; height: 18px; }
+
+.preview {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 25;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 12px;
+  box-shadow: var(--shadow); padding: 6px;
+}
+.pv-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 8px 10px; font-size: 16px; font-weight: 500; }
+.pv-row .pv-text { min-width: 0; overflow-wrap: anywhere; }
+.pv-row .pv-date { flex: none; color: var(--ink); font-weight: 700; font-size: 14px; }
+.pv-row .pv-date.default { color: var(--slate); font-weight: 500; }
+.pv-foot {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  margin-top: 4px; padding: 8px 10px 4px; border-top: 1px solid var(--line);
+  font-size: 13px; color: var(--slate);
+}
+.pv-foot button { border: 0; background: transparent; padding: 0; color: var(--ink); font-weight: 700; font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
 .btn {
-  height: 34px; min-width: 34px; padding: 0 12px;
-  border: 0; border-radius: 8px; background: transparent;
+  height: 40px; min-width: 40px; padding: 0 12px;
+  border: 0; border-radius: 9px; background: transparent;
   font-size: 15px; font-weight: 600; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
 }
 .btn:hover { background: var(--wash); }
-.btn.icon { padding: 0; width: 34px; color: var(--slate); }
+.btn.icon { padding: 0; width: 40px; color: var(--slate); }
 .btn.icon:hover { color: var(--ink); }
-.btn svg { width: 18px; height: 18px; }
-#todayBtn[aria-pressed="true"] { color: var(--slate); }
-.sync { color: var(--slate); font-weight: 500; font-size: 14px; }
+.btn svg { width: 19px; height: 19px; }
+.sync { color: var(--slate); font-weight: 500; font-size: 14px; flex: none; }
 .sync .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mute); flex: none; }
 .sync[data-state="ok"] .dot { background: var(--ink); }
 .sync[data-state="busy"] .dot { background: var(--slate); }
 .sync[data-state="error"] { color: var(--danger); }
 .sync[data-state="error"] .dot { background: var(--danger); }
 
-/* Board */
-.board {
-  display: grid;
-  grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
-  gap: 0 18px;
-  padding: 6px 24px 48px;
-  min-height: calc(100vh - 60px);
-  min-height: calc(100dvh - 60px);
+/* Two panes: Today (focus) and Upcoming (only days with something on) */
+.main {
+  display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 56px; align-items: start; padding-bottom: 140px;
 }
-.col { display: flex; flex-direction: column; min-width: 0; }
-.head { padding: 12px 12px 11px; border-radius: 8px; margin-bottom: 6px; }
-.dow { font-size: 22px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.1; }
-.dmy { font-size: 14px; font-weight: 500; color: var(--slate); margin-top: 3px; }
-.col.today .head { background: var(--band); color: var(--band-ink); }
-.col.today .dmy { color: inherit; opacity: .72; }
-.col.past .head { opacity: .55; }
-.col.later { background: var(--wash); border-radius: 10px; padding: 0 6px; }
-.col.later .head { padding-left: 6px; padding-right: 6px; }
+.today-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  background: var(--band); color: var(--band-ink);
+  border-radius: 12px; padding: 16px 18px 15px; margin-bottom: 8px;
+}
+.today-head h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.today-head .date { font-size: 15px; font-weight: 500; opacity: .75; margin-top: 3px; }
+.today-head .count { font-size: 15px; font-weight: 700; opacity: .85; white-space: nowrap; }
+.up-head { padding: 16px 4px 15px; margin-bottom: 8px; }
+.up-head h2 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
 
-.list {
-  flex: 1;
-  display: flex; flex-direction: column;
-  min-height: 64px;
-  padding-bottom: 32px;
-}
+.list { display: flex; flex-direction: column; min-height: 8px; position: relative; }
+#todayList { min-height: 140px; padding-bottom: 24px; }
+#todayList:not(:has(.task))::before { content: "Nothing left for today."; color: var(--slate); padding: 10px 12px; font-size: 16px; }
+#upcoming:not(:has(.group))::before { content: "Nothing planned yet. Add a day to a task and it shows here."; display: block; color: var(--slate); padding: 10px 12px; font-size: 16px; }
+.group { margin-bottom: 18px; }
+.group-head { display: flex; align-items: baseline; gap: 10px; padding: 6px 12px 4px; }
+.group-head .gd { font-size: 17px; font-weight: 800; }
+.group-head .gs { font-size: 14px; font-weight: 500; color: var(--slate); }
+
 .task {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 7px 6px 7px 10px;
-  border-radius: 8px;
+  position: relative;
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 8px 8px 8px 12px; border-radius: 9px;
   cursor: grab;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
 .task:hover { background: var(--wash); }
-.col.later .task:hover { background: var(--paper); }
 .check {
-  flex: none; width: 20px; height: 20px; margin-top: 1px; padding: 0;
+  flex: none; width: 21px; height: 21px; margin-top: 1px; padding: 0;
   border: 2px solid var(--mute); border-radius: 50%; background: transparent;
   display: grid; place-items: center; cursor: pointer;
 }
@@ -135,86 +173,117 @@ button { font: inherit; color: inherit; }
 .text {
   flex: 1; min-width: 0;
   font-size: 16px; font-weight: 500; line-height: 1.4;
-  overflow-wrap: anywhere; white-space: pre-wrap;
-  outline: none; cursor: text;
+  overflow-wrap: anywhere; white-space: pre-wrap; outline: none; cursor: text;
 }
 .task.done .text { color: var(--mute); text-decoration: line-through; }
 .task.editing { background: var(--wash); cursor: auto; }
-.col.later .task.editing { background: var(--paper); }
 .task.editing .text { -webkit-user-select: text; user-select: text; }
-.since { flex: none; font-size: 13px; font-weight: 500; color: var(--slate); margin-top: 2px; white-space: nowrap; }
-.task.editing .since { display: none; }
-.task { position: relative; }
+.since { flex: none; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--slate); white-space: nowrap; }
+.late {
+  flex: none; margin-top: 0; padding: 2px 8px; border-radius: 6px;
+  background: var(--sky); color: var(--ink);
+  font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.task.editing .since, .task.editing .late { display: none; }
+
 /* Row buttons float over the end of the row on hover, and sit inline while editing */
 .acts {
-  position: absolute; right: 4px; top: 3px;
-  display: none; gap: 2px; border-radius: 6px;
-  background: var(--wash); box-shadow: -12px 0 10px -4px var(--wash);
+  position: absolute; right: 6px; top: 4px;
+  display: none; gap: 2px; border-radius: 7px;
+  background: var(--wash); box-shadow: -14px 0 10px -4px var(--wash);
 }
-.col.later .acts { background: var(--paper); box-shadow: -12px 0 10px -4px var(--paper); }
 @media (hover: hover) { .task:hover .acts { display: flex; } }
 .task.editing .acts { position: static; display: flex; flex: none; margin: -4px 0; background: transparent; box-shadow: none; }
 .act {
-  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px;
+  width: 30px; height: 30px; padding: 0; border: 0; border-radius: 7px;
   background: transparent; color: var(--slate); cursor: pointer;
   display: grid; place-items: center;
 }
 .act:hover { background: var(--line); color: var(--ink); }
 .act svg { width: 16px; height: 16px; }
 
-/* The add row sits first in the DOM but shows last, so dropped tasks always land above it */
-.add-row {
-  order: 999;
-  display: flex; align-items: center; gap: 10px;
-  padding: 2px 6px 2px 10px; border-radius: 8px;
-}
-.add-row .plus { flex: none; width: 20px; text-align: center; color: var(--mute); font-size: 20px; font-weight: 400; line-height: 1; }
-.add {
-  flex: 1; min-width: 0; height: 36px; padding: 0;
-  border: 0; background: transparent; outline: none;
-  font: inherit; font-size: 16px; font-weight: 500; color: var(--ink);
-}
-.add::placeholder { color: var(--mute); opacity: 1; }
-.add-row:focus-within { background: var(--wash); }
-.col.later .add-row:focus-within { background: var(--paper); }
-.add-row:focus-within .plus { color: var(--ink); }
-.col.past .add-row { display: none; }
-
 /* Dragging */
 .ghost { background: var(--sky) !important; }
 .ghost > * { visibility: hidden; }
-.drag-clone { background: var(--paper) !important; box-shadow: var(--shadow); opacity: 1 !important; cursor: grabbing; }
-.drag-clone .acts, .drag-clone .since { display: none; }
+.drag-clone {
+  width: min(260px, 64vw) !important; height: auto !important;
+  margin-top: -58px !important; /* float above the pointer so the target stays visible */
+  background: var(--paper) !important; box-shadow: var(--shadow); opacity: .96 !important;
+  cursor: grabbing; border-radius: 9px;
+}
+.drag-clone .text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.drag-clone .acts, .drag-clone .since, .drag-clone .late { display: none !important; }
 body.dragging, body.dragging * { cursor: grabbing !important; }
 
-.date-picker { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+/* Day targets that appear while dragging */
+.dropbar {
+  position: fixed; left: 50%; bottom: max(32px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  z-index: 80; display: none; flex-wrap: wrap; justify-content: center; gap: 8px;
+  width: max-content; max-width: calc(100vw - 32px);
+  padding: 10px; border: 1.5px solid var(--line); border-radius: 16px;
+  background: var(--paper); box-shadow: var(--shadow);
+}
+body.dragging .dropbar { display: flex; }
+.chip {
+  min-width: 66px; height: 50px; padding: 0 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 1.5px solid var(--line); border-radius: 11px;
+  font-size: 15px; font-weight: 800; line-height: 1.15;
+  -webkit-user-select: none; user-select: none;
+}
+.chip small { font-size: 12px; font-weight: 500; color: var(--slate); }
+.chip .task { display: none !important; }
+.chip:has(.task) { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.chip:has(.task) small { color: inherit; opacity: .75; }
+
+/* Day picker */
+.pop {
+  position: fixed; z-index: 60; min-width: 240px;
+  display: flex; flex-direction: column; padding: 6px;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+}
+.pop button {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 18px;
+  padding: 10px 12px; border: 0; border-radius: 8px; background: transparent;
+  font-size: 15px; font-weight: 700; text-align: left; cursor: pointer;
+}
+.pop button span { color: var(--slate); font-weight: 500; font-size: 14px; }
+.pop button:hover, .pop button:focus-visible { background: var(--wash); outline: none; }
+.pop label {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  margin-top: 4px; padding: 10px 12px 6px; border-top: 1px solid var(--line);
+  font-size: 15px; font-weight: 700;
+}
+.pop input[type="date"] {
+  font: inherit; font-size: 14px; font-weight: 500; color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: 8px; padding: 5px 8px; background: var(--paper);
+}
 
 /* Toast */
 .toast {
-  position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translate(-50%, 12px);
-  background: var(--ink); color: var(--paper);
-  padding: 10px 16px; border-radius: 10px; font-size: 15px; font-weight: 600;
-  box-shadow: var(--shadow); opacity: 0; pointer-events: none;
-  transition: opacity .18s, transform .18s; z-index: 30; max-width: calc(100vw - 32px);
+  position: fixed; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translate(-50%, 12px);
+  z-index: 70; display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 32px);
+  padding: 11px 16px; border-radius: 11px; background: var(--ink); color: var(--paper);
+  font-size: 15px; font-weight: 600; box-shadow: var(--shadow);
+  opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
-.toast { display: flex; align-items: center; gap: 14px; }
 .toast button { border: 0; background: transparent; color: inherit; font-weight: 800; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
 /* Dialogs */
 dialog {
-  width: min(480px, calc(100vw - 32px));
+  width: min(500px, calc(100vw - 32px));
   border: 0; border-radius: 14px; padding: 24px;
   background: var(--paper); color: var(--ink); box-shadow: var(--shadow);
 }
 dialog::backdrop { background: rgba(4, 30, 66, .35); }
-dialog h2 { margin: 0 0 14px; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; }
+dialog h2 { margin: 0 0 14px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
 dialog p, dialog li { font-size: 15px; color: var(--slate); }
 dialog ol, dialog ul { padding-left: 20px; margin: 0 0 16px; }
-dialog li { margin-bottom: 8px; }
-dialog li b { color: var(--ink); font-weight: 600; }
-dialog a { color: var(--ink); font-weight: 600; }
-.field { display: block; margin-bottom: 12px; font-size: 14px; font-weight: 600; }
+dialog li { margin-bottom: 9px; }
+dialog li b { color: var(--ink); font-weight: 700; }
+dialog a { color: var(--ink); font-weight: 700; }
+.field { display: block; margin-bottom: 12px; font-size: 14px; font-weight: 700; }
 .field input {
   display: block; width: 100%; margin-top: 6px; height: 42px; padding: 0 12px;
   border: 1.5px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink);
@@ -231,16 +300,21 @@ dialog a { color: var(--ink); font-weight: 600; }
 .quiet { color: var(--slate); font-weight: 500; }
 .connected { color: var(--ink); font-weight: 600; }
 
-/* Phone: days stack vertically */
-@media (max-width: 720px) {
-  .bar { padding-left: 12px; padding-right: 12px; }
-  .board { display: block; padding: 0 16px 64px; min-height: 0; }
-  .col { margin-bottom: 14px; }
-  .head { display: flex; align-items: baseline; gap: 10px; padding: 10px 12px; }
-  .dow { font-size: 20px; }
-  .dmy { margin-top: 0; }
-  .list { min-height: 44px; padding-bottom: 6px; }
-  .col.later { padding: 0 4px 4px; }
+/* Phone */
+@media (max-width: 760px) {
+  .wrap { padding: 0 16px; }
+  .top { padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: 12px; }
+  .top-row { gap: 2px; }
+  .capture { height: 50px; padding-left: 12px; }
+  #entry { font-size: 16px; }
+  .when .lbl { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sync[data-state="ok"] .label, .sync[data-state="busy"] .label { display: none; }
+  .main { display: block; padding-bottom: 160px; }
+  .today-head h1 { font-size: 24px; }
+  #todayList { min-height: 80px; }
+  .up-pane { margin-top: 18px; }
+  .up-head h2 { font-size: 24px; }
+  .chip { min-width: 58px; height: 46px; padding: 0 10px; font-size: 14px; }
 }
 @media (hover: none) {
   .task:hover { background: transparent; }
@@ -252,17 +326,20 @@ dialog a { color: var(--ink); font-weight: 600; }
 </style>
 </head>
 <body>
-<header class="bar">
-  <div class="nav">
-    <button class="btn icon" id="prevBtn" aria-label="Show earlier days" title="Earlier">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
-    </button>
-    <button class="btn" id="todayBtn">Today</button>
-    <button class="btn icon" id="nextBtn" aria-label="Show later days" title="Later">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg>
-    </button>
-  </div>
-  <div class="tools">
+<header class="top">
+  <div class="wrap top-row">
+    <div class="capture-wrap">
+      <div class="capture">
+        <span class="plus" aria-hidden="true">+</span>
+        <input id="entry" type="text" autocomplete="off" autocapitalize="sentences" spellcheck="true"
+               placeholder="Add a task, e.g. &ldquo;call Ian Thursday&rdquo;" aria-label="Add a task">
+        <button class="when" id="whenBtn" type="button" aria-label="Choose a day for new tasks" title="Choose a day">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>
+          <span class="lbl" id="whenLabel" hidden></span>
+        </button>
+      </div>
+      <div class="preview" id="preview" hidden></div>
+    </div>
     <button class="btn sync" id="syncBtn" data-state="local" title="Sync settings"><span class="dot"></span><span class="label" id="syncText">Not synced</span></button>
     <button class="btn icon" id="helpBtn" aria-label="Help" title="Help">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.5"/><path d="M7.9 7.6a2.2 2.2 0 0 1 4.2.9c0 1.5-2.1 1.9-2.1 3.2"/><circle cx="10" cy="14.3" r=".4" fill="currentColor"/></svg>
@@ -270,9 +347,33 @@ dialog a { color: var(--ink); font-weight: 600; }
   </div>
 </header>
 
-<main class="board" id="board" aria-label="Tasks by day"></main>
+<main class="wrap main">
+  <section class="today-pane" aria-labelledby="todayTitle">
+    <div class="today-head">
+      <div>
+        <h1 id="todayTitle">Today</h1>
+        <div class="date" id="todayDate"></div>
+      </div>
+      <div class="count" id="todayCount"></div>
+    </div>
+    <div class="list" id="todayList"></div>
+  </section>
+  <section class="up-pane" aria-labelledby="upTitle">
+    <div class="up-head"><h2 id="upTitle">Upcoming</h2></div>
+    <div id="upcoming"></div>
+  </section>
+</main>
 
-<input type="date" id="datePicker" class="date-picker" tabindex="-1" aria-hidden="true">
+<div class="dropbar" id="dropbar" aria-hidden="true"></div>
+
+<div class="pop" id="pop" role="menu" hidden>
+  <button type="button" data-when="today" role="menuitem">Today</button>
+  <button type="button" data-when="tomorrow" role="menuitem">Tomorrow <span id="popTomorrow"></span></button>
+  <button type="button" data-when="nextweek" role="menuitem">Next week <span id="popNextWeek"></span></button>
+  <button type="button" data-when="later" role="menuitem">Later <span>No date</span></button>
+  <label>Pick a date <input type="date" id="popDate"></label>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <dialog id="settings" aria-labelledby="settingsTitle">
@@ -303,12 +404,13 @@ dialog a { color: var(--ink); font-weight: 600; }
 <dialog id="help" aria-labelledby="helpTitle">
   <h2 id="helpTitle">How it works</h2>
   <ul>
-    <li>Type a task and press <b>Enter</b>. Keep typing to add the next one.</li>
-    <li>Drag a task to another day or to <b>Later</b>. On a phone, press and hold first.</li>
-    <li>Anything not done moves to today by itself, with a note of when it was first due.</li>
+    <li>Type a task and press <b>Enter</b>. The box stays ready for the next one. Press <b>N</b> to jump to it.</li>
+    <li>Say or type when: <b>Thursday</b>, <b>next Thursday</b>, <b>tomorrow</b>, <b>next week</b>, <b>5 Nov</b>, <b>in 3 days</b>, <b>someday</b>. The task goes to that day.</li>
+    <li>A list becomes separate tasks: <b>call Ian, send Pete the deck and book the car service</b>. Check the preview, or press <b>Shift+Enter</b> to add it exactly as typed.</li>
+    <li>The calendar button in the box sets the day for everything you add until you change it.</li>
+    <li>Drag a task to reorder it or move it to another day. Day buttons appear at the bottom while you drag. On a phone, press and hold first.</li>
+    <li>Anything not done moves to today by itself. After three days it's marked overdue.</li>
     <li>Click a task to edit it. Clear the text to delete it.</li>
-    <li>The calendar button moves a task to any date.</li>
-    <li>Press <b>N</b> to start a new task for today.</li>
   </ul>
   <div class="row"><span class="spacer"></span><button class="btn primary" id="closeHelp" type="button">Got it</button></div>
 </dialog>
@@ -321,15 +423,16 @@ dialog a { color: var(--ink); font-weight: 600; }
   const DEFAULT_REPO = 'stephengray89-source/tasks-data';
   const FILE_PATH = 'tasks.json';
   const API = 'https://api.github.com';
-  const PRUNE_DAYS = 60;           // done tasks older than this leave tasks.json (git history keeps them)
+  const PRUNE_DAYS = 60;        // done tasks older than this leave tasks.json (git history keeps them)
+  const OVERDUE_DAYS = 3;       // carried this many days or more: flagged as overdue
   const POLL_MS = 45000;
   const KEY = { tasks: 'taskboard:tasks', dirty: 'taskboard:dirty', cfg: 'taskboard:config', sha: 'taskboard:sha' };
 
   const $ = (s) => document.querySelector(s);
-  const board = $('#board');
   const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   /* ---------- storage ---------- */
   const store = {
@@ -348,33 +451,145 @@ dialog a { color: var(--ink); font-weight: 600; }
 
   function shortDate(s) {
     const d = parseYmd(s);
-    const yr = d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : '';
+    const yr = d.getFullYear() !== parseYmd(today).getFullYear() ? ` ${d.getFullYear()}` : '';
     return `${d.getDate()} ${MONTHS[d.getMonth()]}${yr}`;
   }
-  function sinceLabel(date) {
-    const n = daysBetween(date, today);
-    if (n === 1) return 'since yesterday';
-    if (n < 7) return `since ${DAY_SHORT[parseYmd(date).getDay()]}`;
-    return `since ${shortDate(date)}`;
+  /* "Today", "Tomorrow", "Thu 5 Nov", "Later" */
+  function whenLabel(date) {
+    if (date === null) return 'Later';
+    if (date === today) return 'Today';
+    if (date === addDays(today, 1)) return 'Tomorrow';
+    return `${DAY_SHORT[parseYmd(date).getDay()]} ${shortDate(date)}`;
+  }
+  function nextWeekday(dow) {                 // the coming one, today included
+    const d = parseYmd(today);
+    d.setDate(d.getDate() + ((dow - d.getDay() + 7) % 7));
+    return ymd(d);
+  }
+  function weekdayNextWeek(dow) {             // that day in next Monday-to-Sunday week
+    const d = parseYmd(today);
+    d.setDate(d.getDate() + (((1 - d.getDay() + 7) % 7) || 7) + ((dow + 6) % 7));
+    return ymd(d);
   }
 
+  /* ---------- reading days and lists out of what was typed ---------- */
+  const WD = 'sun(?:day)?|mon(?:day)?|tue(?:s|sday)?|wed(?:s|nesday)?|thu(?:r|rs|rsday)?|fri(?:day)?|sat(?:urday)?';
+  const MO = 'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?';
+  const PRE = '(?:(?:on|by|for|due|before)\\s+)?';
+  const NUM = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+  const dow = (w) => ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].indexOf(w.slice(0, 3).toLowerCase());
+  const mon = (w) => ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(w.slice(0, 3).toLowerCase());
+  const LATER = 'LATER';
+
+  function dayMonth(day, month, year) {
+    if (month < 0 || month > 11 || day < 1 || day > 31) return undefined;
+    let y = year ? (String(year).length === 2 ? 2000 + Number(year) : Number(year)) : parseYmd(today).getFullYear();
+    let d = new Date(y, month, day);
+    if (d.getMonth() !== month) return undefined;
+    if (!year && ymd(d) < today) d = new Date(y + 1, month, day);
+    return ymd(d);
+  }
+
+  const RULES = [
+    { re: `${PRE}(?:the\\s+)?day\\s+after\\s+tomorrow`, at: () => addDays(today, 2) },
+    { re: `${PRE}(?:today|tonight|this\\s+(?:morning|afternoon|arvo|evening))`, at: () => today },
+    { re: `${PRE}(?:tomorrow|tmrw|tmr|tomoz)(?:\\s+(?:morning|afternoon|arvo|night|evening))?`, at: () => addDays(today, 1) },
+    { re: `${PRE}(?:next\\s+(${WD})|(${WD})\\s+next\\s+week)`, at: (m) => weekdayNextWeek(dow(m[1] || m[2])) },
+    { re: `${PRE}(?:early\\s+)?next\\s+week`, at: () => weekdayNextWeek(1) },
+    { re: `${PRE}(?:this\\s+)?weekend`, at: () => { const d = parseYmd(today).getDay(); return d === 6 || d === 0 ? today : nextWeekday(6); } },
+    { re: `(?:on|by|for|due|before|this|this\\s+coming|coming)\\s+(${WD})`, at: (m) => nextWeekday(dow(m[1])) },
+    { re: '(sunday|monday|tuesday|wednesday|thursday|friday|saturday)', bare: true, at: (m) => nextWeekday(dow(m[1])) },
+    { re: 'in\\s+(\\d{1,3}|a|an|one|two|three|four|five|six|seven|eight|nine|ten)\\s+(days?|weeks?|fortnights?|months?)', at: (m) => {
+        const n = /\d/.test(m[1]) ? Number(m[1]) : NUM[m[1].toLowerCase()];
+        const u = m[2].toLowerCase();
+        if (u.startsWith('day')) return addDays(today, n);
+        if (u.startsWith('week')) return addDays(today, 7 * n);
+        if (u.startsWith('fortnight')) return addDays(today, 14 * n);
+        const d = parseYmd(today); d.setMonth(d.getMonth() + n); return ymd(d);
+      } },
+    { re: `${PRE}(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?(${MO})`, at: (m) => dayMonth(Number(m[1]), mon(m[2])) },
+    { re: `${PRE}(${MO})\\s+(\\d{1,2})(?:st|nd|rd|th)?`, at: (m) => dayMonth(Number(m[2]), mon(m[1])) },
+    { re: `${PRE}(\\d{1,2})/(\\d{1,2})(?:/(\\d{2}|\\d{4}))?`, at: (m) => dayMonth(Number(m[1]), Number(m[2]) - 1, m[3]) },
+    { re: 'some\\s?day', at: () => LATER },
+    { re: 'later', end: true, at: () => LATER }
+  ].map((r) => ({ ...r, rx: new RegExp(`\\b${r.re}\\b`, 'gi') }));
+
+  /* Find the day in one task's text. Returns { text, date } with date undefined when none was found. */
+  function findDate(raw) {
+    const s = raw;
+    const lead = s.match(/^[\s,.;:-]*/)[0].length;
+    const tailText = s.replace(/[\s,.;:!-]*$/, '');
+    let best = null;
+    for (const r of RULES) {
+      r.rx.lastIndex = 0;
+      for (const m of s.matchAll(r.rx)) {
+        const start = m.index, end = m.index + m[0].length;
+        const atStart = start === lead, atEnd = end >= tailText.length;
+        if (r.bare && !atStart && !atEnd) continue;
+        if (r.end && !atEnd) continue;
+        const date = r.at(m);
+        if (date === undefined) continue;
+        if (!best || end > best.end || (end === best.end && start < best.start)) best = { start, end, date, atStart };
+      }
+    }
+    if (!best) return { text: tidy(s), date: undefined };
+    let text = (s.slice(0, best.start) + ' ' + s.slice(best.end)).replace(/\s+/g, ' ');
+    text = tidy(text);
+    if (best.atStart && /^[A-Z]/.test(s.slice(lead)) && text) text = text[0].toUpperCase() + text.slice(1);
+    return { text, date: best.date === LATER ? null : best.date };
+  }
+  function tidy(t) {
+    return t.replace(/\s+/g, ' ').replace(/^[\s,.;:-]+/, '').replace(/[\s,.;:!-]+$/, '').replace(/\s+(?:on|by|for|due|at)$/i, '').trim();
+  }
+
+  /* Split a spoken or typed list into tasks. Only splits when there's a comma or semicolon. */
+  function splitList(raw) {
+    const s = raw.replace(/\s+/g, ' ').trim();
+    if (!/;|,(?=\s|$)/.test(s)) return [s];
+    let parts = s.split(/\s*;\s*|,(?=\s|$)\s*/).map((p) => p.replace(/^(?:and|then|also|plus)\s+/i, '').trim()).filter(Boolean);
+    const last = parts.pop();
+    parts = parts.concat(last.split(/\s+(?:and then|and|then)\s+/i).filter(Boolean));
+    return parts;
+  }
+
+  /* What the entry box will add: [{ text, date, set }] where set = the day came from the words */
+  function readEntry(raw, fallback) {
+    const pieces = splitList(raw).map(findDate);
+    const out = [];
+    for (const p of pieces) {
+      if (!p.text && p.date !== undefined) {           // "Call Ian, Thursday": the day belongs to the task before
+        const prev = out[out.length - 1];
+        if (prev && !prev.set) { prev.date = p.date; prev.set = true; }
+        else pendingDate = p.date;
+        continue;
+      }
+      if (!p.text) continue;
+      out.push({ text: p.text, date: p.date === undefined ? fallback : p.date, set: p.date !== undefined });
+    }
+    if (pendingDate !== undefined && out[0] && !out[0].set) { out[0].date = pendingDate; out[0].set = true; }
+    pendingDate = undefined;
+    // Dictation starts with a capital, so give every task in the list one too
+    if (/^[\s,.;:-]*[A-Z]/.test(raw)) for (const it of out) it.text = it.text[0].toUpperCase() + it.text.slice(1);
+    return out;
+  }
+  let pendingDate;
+
   /* ---------- state ---------- */
-  let tasks = new Map();     // id -> task
-  let dirty = new Map();     // id -> change counter, for ids changed here and not yet saved to GitHub
+  let tasks = new Map();
+  let dirty = new Map();       // id -> change counter, for ids changed here and not yet saved to GitHub
   let seq = 0;
   let sha = store.get(KEY.sha, null);
-  let cfg = store.get(KEY.cfg, null);   // { token, repo }
-  let offset = 0;            // days from today for the first visible column
+  let cfg = store.get(KEY.cfg, null);
   let editingId = null;
   let renderQueued = false;
   let lastDragEnd = 0;
+  let entryDate;               // day chosen with the calendar button; undefined = today
 
   function normalize(t) {
     if (!t || typeof t.id !== 'string' || !t.id || typeof t.text !== 'string') return null;
     const created = typeof t.createdAt === 'string' ? t.createdAt : new Date(0).toISOString();
     const out = {
-      id: t.id,
-      text: t.text,
+      id: t.id, text: t.text,
       date: isDate(t.date) ? t.date : null,
       done: !!t.done,
       order: Number.isFinite(t.order) ? t.order : (Date.parse(created) || 0),
@@ -384,7 +599,6 @@ dialog a { color: var(--ink); font-weight: 600; }
     if (isDate(t.doneAt)) out.doneAt = t.doneAt;
     return out;
   }
-
   function loadLocal() {
     tasks = new Map(store.get(KEY.tasks, []).map(normalize).filter(Boolean).map((t) => [t.id, t]));
     dirty = new Map(store.get(KEY.dirty, []).map((id) => [id, ++seq]));
@@ -395,16 +609,17 @@ dialog a { color: var(--ink); font-weight: 600; }
     store.set(KEY.sha, sha);
   }
 
-  /* Unfinished tasks from past days show today. Done tasks stay where they were done. */
+  /* Unfinished tasks from past days show today */
   function shownOn(t) {
     if (!t.done && t.date && t.date < today) return today;
     return t.date;
   }
   const byOrder = (a, b) => (a.order - b.order) || a.createdAt.localeCompare(b.createdAt);
+  const openFirst = (a, b) => (a.done - b.done) || (a.done ? a.updatedAt.localeCompare(b.updatedAt) : byOrder(a, b));
   function tasksFor(date) {
     const out = [];
     for (const t of tasks.values()) if (shownOn(t) === date) out.push(t);
-    return out.sort(byOrder);
+    return out.sort(openFirst);
   }
 
   function newId() {
@@ -430,34 +645,28 @@ dialog a { color: var(--ink); font-weight: 600; }
     if (cfg) { setStatus('busy'); queueSync(600); }
   }
 
+  function endOrder(date, exceptId) {
+    let max = Date.now();
+    for (const t of tasks.values()) if (t.id !== exceptId && shownOn(t) === date && !t.done) max = Math.max(max, t.order + 1);
+    return max;
+  }
   function addTask(text, date) {
     text = text.replace(/\s+/g, ' ').trim();
     if (!text) return;
-    const list = tasksFor(date);
-    const last = list[list.length - 1];
-    const now = new Date();
-    commit({
-      id: newId(), text, date, done: false,
-      order: Math.max(now.getTime(), last ? last.order + 1 : 0),
-      createdAt: now.toISOString(), updatedAt: now.toISOString()
-    });
+    const now = new Date().toISOString();
+    commit({ id: newId(), text, date, done: false, order: endOrder(date), createdAt: now, updatedAt: now });
   }
-
   function toggleDone(t) {
     if (t.done) { t.done = false; delete t.doneAt; }
-    else {
-      t.done = true; t.doneAt = today;
-      if (!t.date || t.date < today) t.date = today;
-    }
+    else { t.done = true; t.doneAt = today; t.date = today; }
     commit(t);
   }
-
-  function moveTo(t, date, silent) {
-    const list = tasksFor(date).filter((x) => x.id !== t.id);
+  function moveTo(t, date) {
+    if (date === shownOn(t)) { render(); return; }
+    t.order = endOrder(date, t.id);
     t.date = date;
-    t.order = list.length ? list[list.length - 1].order + 1000 : Date.now();
     commit(t);
-    if (!silent) toast(date ? `Moved to ${DAY_SHORT[parseYmd(date).getDay()]} ${shortDate(date)}` : 'Moved to Later');
+    toast(date === null ? 'Moved to Later' : `Moved to ${whenLabel(date)}`);
   }
 
   /* ---------- rendering ---------- */
@@ -467,20 +676,10 @@ dialog a { color: var(--ink); font-weight: 600; }
     del: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m4 4 8 8M12 4l-8 8"/></svg>'
   };
 
-  const isPhone = () => matchMedia('(max-width: 720px)').matches;
-
-  function visibleDays() {
-    let n = 7;
-    if (!isPhone()) {
-      const w = window.innerWidth - 48;
-      n = Math.max(1, Math.min(7, Math.floor(w / 228) - 1));
-    }
-    const start = addDays(today, offset);
-    return Array.from({ length: n }, (_, i) => addDays(start, i));
-  }
-
-  let viewKey = '';
-  let sortables = [];
+  const todayList = $('#todayList');
+  const upcoming = $('#upcoming');
+  let groupSortables = [];
+  let shownToday = '';
 
   /* Don't rebuild rows while a finger or mouse button is down, or the click would be lost */
   let pointerDown = false;
@@ -492,66 +691,91 @@ dialog a { color: var(--ink); font-weight: 600; }
   function render() {
     if (editingId || pointerDown || document.body.classList.contains('dragging')) { renderQueued = true; return; }
     renderQueued = false;
-    const days = visibleDays();
-    const key = days.join(',') + '|' + today;
-    if (key !== viewKey) buildColumns(days, key);
-    board.querySelectorAll('.list').forEach(fillList);
-    $('#todayBtn').setAttribute('aria-pressed', String(offset === 0));
-  }
+    if (shownToday !== today) { shownToday = today; buildDropbar(); updateWhen(); }
 
-  function buildColumns(days, key) {
-    const active = document.activeElement;
-    const keep = active && active.classList.contains('add') ? { date: active.closest('.list').dataset.date, value: active.value } : null;
+    const d = parseYmd(today);
+    $('#todayDate').textContent = `${DAY_NAMES[d.getDay()]} ${d.getDate()} ${MONTHS_LONG[d.getMonth()]}`;
+    todayList.dataset.date = today;
+    const todays = tasksFor(today);
+    fill(todayList, todays);
+    const left = todays.filter((t) => !t.done).length;
+    $('#todayCount').textContent = left ? `${left} to do` : (todays.length ? 'All done' : '');
 
-    sortables.forEach((s) => s.destroy());
-    sortables = [];
-    board.textContent = '';
-    board.style.setProperty('--cols', days.length + 1);
-
-    for (const d of [...days, null]) board.appendChild(columnEl(d));
-    viewKey = key;
-
-    if (keep) {
-      const input = board.querySelector(`.list[data-date="${keep.date}"] .add`);
-      if (input) { input.value = keep.value; input.focus(); }
+    groupSortables.forEach((s) => s.destroy());
+    groupSortables = [];
+    upcoming.textContent = '';
+    const groups = new Map();
+    for (const t of tasks.values()) {
+      const on = shownOn(t);
+      if (on === today || (on !== null && on < today)) continue;
+      if (!groups.has(on)) groups.set(on, []);
+      groups.get(on).push(t);
     }
+    const keys = [...groups.keys()].sort((a, b) => (a === null) - (b === null) || String(a).localeCompare(String(b)));
+    for (const k of keys) upcoming.appendChild(groupEl(k, groups.get(k).sort(openFirst)));
+    if (entryDate !== undefined && entryDate !== null && entryDate <= today) { entryDate = undefined; updateWhen(); }
   }
 
-  function columnEl(date) {
-    const col = document.createElement('section');
-    col.className = 'col';
+  function groupEl(date, items) {
+    const g = document.createElement('div');
+    g.className = 'group';
     const head = document.createElement('div');
-    head.className = 'head';
-    const dow = document.createElement('div');
-    dow.className = 'dow';
-    const dmy = document.createElement('div');
-    dmy.className = 'dmy';
-    if (date) {
+    head.className = 'group-head';
+    const a = document.createElement('span'); a.className = 'gd';
+    const b = document.createElement('span'); b.className = 'gs';
+    if (date === null) { a.textContent = 'Later'; b.textContent = 'No date'; }
+    else {
       const d = parseYmd(date);
-      dow.textContent = DAY_NAMES[d.getDay()];
-      dmy.textContent = date === today ? `Today, ${shortDate(date)}` : date === addDays(today, 1) ? `Tomorrow, ${shortDate(date)}` : shortDate(date);
-      if (date === today) col.classList.add('today');
-      if (date < today) col.classList.add('past');
-    } else {
-      col.classList.add('later');
-      dow.textContent = 'Later';
-      dmy.textContent = 'No date';
+      a.textContent = date === addDays(today, 1) ? 'Tomorrow' : DAY_NAMES[d.getDay()];
+      b.textContent = date === addDays(today, 1) ? `${DAY_SHORT[d.getDay()]} ${shortDate(date)}` : shortDate(date);
     }
-    head.append(dow, dmy);
-    col.setAttribute('aria-label', date ? `${dow.textContent} ${shortDate(date)}` : 'Later');
-
+    head.append(a, b);
     const list = document.createElement('div');
     list.className = 'list';
-    list.dataset.date = date || '';
-    const add = document.createElement('div');
-    add.className = 'add-row';
-    add.innerHTML = '<span class="plus" aria-hidden="true">+</span><input class="add" type="text" autocomplete="off" autocapitalize="sentences" placeholder="Add a task">';
-    add.querySelector('input').setAttribute('aria-label', `Add a task to ${date ? dow.textContent : 'Later'}`);
-    list.appendChild(add);
-    col.append(head, list);
+    list.dataset.date = date === null ? '' : date;
+    fill(list, items);
+    g.append(head, list);
+    groupSortables.push(new Sortable(list, sortableOptions()));
+    return g;
+  }
 
-    sortables.push(new Sortable(list, {
-      group: { name: 'tasks', pull: true, put: !(date && date < today) },
+  function fill(list, items) {
+    list.querySelectorAll('.task').forEach((n) => n.remove());
+    const frag = document.createDocumentFragment();
+    for (const t of items) frag.appendChild(taskEl(t));
+    list.appendChild(frag);
+  }
+
+  function taskEl(t) {
+    const row = document.createElement('div');
+    row.className = 'task' + (t.done ? ' done' : '');
+    row.dataset.id = t.id;
+    const check = document.createElement('button');
+    check.className = 'check'; check.type = 'button';
+    check.setAttribute('aria-label', t.done ? 'Mark as not done' : 'Mark as done');
+    check.innerHTML = ICON.tick;
+    const text = document.createElement('div');
+    text.className = 'text';
+    text.textContent = t.text;
+    row.append(check, text);
+    if (!t.done && t.date && t.date < today) {
+      const n = daysBetween(t.date, today);
+      const tag = document.createElement('span');
+      if (n >= OVERDUE_DAYS) { tag.className = 'late'; tag.textContent = `${n} days overdue`; }
+      else { tag.className = 'since'; tag.textContent = n === 1 ? 'from yesterday' : `from ${DAY_SHORT[parseYmd(t.date).getDay()]}`; }
+      row.appendChild(tag);
+    }
+    const acts = document.createElement('div');
+    acts.className = 'acts';
+    acts.innerHTML = `<button class="act" type="button" data-act="date" aria-label="Move to another day" title="Move to another day">${ICON.cal}</button><button class="act" type="button" data-act="delete" aria-label="Delete" title="Delete">${ICON.del}</button>`;
+    row.appendChild(acts);
+    return row;
+  }
+
+  /* ---------- drag and drop ---------- */
+  function sortableOptions(extra) {
+    return {
+      group: { name: 'tasks', pull: true, put: true },
       draggable: '.task',
       filter: '.editing',
       preventOnFilter: false,
@@ -564,56 +788,53 @@ dialog a { color: var(--ink); font-weight: 600; }
       delay: 180,
       delayOnTouchOnly: true,
       touchStartThreshold: 6,
-      emptyInsertThreshold: 24,
+      emptyInsertThreshold: 14,
       scroll: true,
-      scrollSensitivity: 90,
-      scrollSpeed: 16,
+      scrollSensitivity: 50,
+      scrollSpeed: 14,
       bubbleScroll: true,
-      onStart: () => document.body.classList.add('dragging'),
-      onEnd: onDrop
-    }));
-    return col;
+      onStart: () => { document.body.classList.add('dragging'); closePop(); $('#toast').classList.remove('show'); },
+      onEnd: onDrop,
+      ...extra
+    };
   }
+  new Sortable(todayList, sortableOptions());
 
-  function fillList(list) {
-    const date = list.dataset.date || null;
-    list.querySelectorAll('.task').forEach((n) => n.remove());
-    const frag = document.createDocumentFragment();
-    for (const t of tasksFor(date)) frag.appendChild(taskEl(t));
-    list.appendChild(frag);
-  }
-
-  function taskEl(t) {
-    const row = document.createElement('div');
-    row.className = 'task' + (t.done ? ' done' : '');
-    row.dataset.id = t.id;
-    const check = document.createElement('button');
-    check.className = 'check';
-    check.type = 'button';
-    check.setAttribute('aria-label', t.done ? 'Mark as not done' : 'Mark as done');
-    check.innerHTML = ICON.tick;
-    const text = document.createElement('div');
-    text.className = 'text';
-    text.textContent = t.text;
-    row.append(check, text);
-    if (!t.done && t.date && t.date < today) {
-      const since = document.createElement('span');
-      since.className = 'since';
-      since.textContent = sinceLabel(t.date);
-      row.appendChild(since);
+  function buildDropbar() {
+    const bar = $('#dropbar');
+    bar.textContent = '';
+    const chips = [{ date: today, a: 'Today', b: '' }];
+    for (let i = 1; i <= 7; i++) {
+      const d = addDays(today, i);
+      const dd = parseYmd(d);
+      chips.push({ date: d, a: i === 1 ? 'Tomorrow' : DAY_SHORT[dd.getDay()], b: String(dd.getDate()) });
     }
-    const acts = document.createElement('div');
-    acts.className = 'acts';
-    acts.innerHTML = `<button class="act" type="button" data-act="date" aria-label="Move to a date" title="Move to a date">${ICON.cal}</button><button class="act" type="button" data-act="delete" aria-label="Delete" title="Delete">${ICON.del}</button>`;
-    row.appendChild(acts);
-    return row;
+    chips.push({ date: '', a: 'Later', b: '' }, { date: 'pick', a: 'Pick', b: 'a date' });
+    for (const c of chips) {
+      const el = document.createElement('div');
+      el.className = 'chip';
+      el.dataset.date = c.date;
+      el.innerHTML = `<span>${c.a}</span>${c.b ? `<small>${c.b}</small>` : ''}`;
+      bar.appendChild(el);
+      new Sortable(el, sortableOptions({ group: { name: 'tasks', pull: false, put: true }, sort: false, emptyInsertThreshold: 4 }));
+    }
   }
 
   function onDrop(evt) {
+    const toChip = evt.to.classList.contains('chip');
+    const chipRect = toChip ? evt.to.getBoundingClientRect() : null;
     document.body.classList.remove('dragging');
     pointerDown = false;
     lastDragEnd = Date.now();
     const t = tasks.get(evt.item.dataset.id);
+    if (toChip) {
+      evt.item.remove();
+      if (!t) { render(); return; }
+      const d = evt.to.dataset.date;
+      if (d === 'pick') { render(); openPop(chipRect, (when) => { const cur = tasks.get(t.id); if (cur) moveTo(cur, when); }, true); }
+      else moveTo(t, d || null);
+      return;
+    }
     if (!t || (evt.from === evt.to && evt.oldDraggableIndex === evt.newDraggableIndex)) { render(); return; }
     const toDate = evt.to.dataset.date || null;
     const rows = [...evt.to.querySelectorAll('.task')];
@@ -624,12 +845,136 @@ dialog a { color: var(--ink); font-weight: 600; }
     else if (prev) t.order = prev.order + 1000;
     else if (next) t.order = next.order - 1000;
     else t.order = Date.now();
-    // Reordering inside the same day keeps the original due date (so "since" notes survive)
+    // Reordering inside today keeps the original due date, so overdue notes survive
     if (toDate !== shownOn(t)) t.date = toDate;
     commit(t);
   }
 
-  /* ---------- editing ---------- */
+  /* ---------- day picker ---------- */
+  const pop = $('#pop');
+  let popPick = null;
+  function openPop(rect, onPick, centre) {
+    const nw = weekdayNextWeek(1);
+    $('#popTomorrow').textContent = DAY_SHORT[parseYmd(addDays(today, 1)).getDay()];
+    $('#popNextWeek').textContent = whenLabel(nw);
+    $('#popDate').value = '';
+    $('#popDate').min = today;
+    popPick = onPick;
+    pop.hidden = false;
+    const w = pop.offsetWidth, h = pop.offsetHeight;
+    let left, top;
+    if (centre || !rect || !rect.width) { left = (innerWidth - w) / 2; top = Math.max(16, (innerHeight - h) / 2); }
+    else {
+      left = Math.min(Math.max(8, rect.right - w), innerWidth - w - 8);
+      top = rect.bottom + 6;
+      if (top + h > innerHeight - 8) top = Math.max(8, rect.top - h - 6);
+    }
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+    pop.querySelector('button').focus({ preventScroll: true });
+  }
+  function closePop() { pop.hidden = true; popPick = null; }
+  function pick(value) {
+    const fn = popPick;
+    closePop();
+    if (fn) fn(value);
+  }
+  pop.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-when]');
+    if (!b) return;
+    const w = b.dataset.when;
+    pick(w === 'today' ? today : w === 'tomorrow' ? addDays(today, 1) : w === 'nextweek' ? weekdayNextWeek(1) : null);
+  });
+  $('#popDate').addEventListener('change', (e) => { if (isDate(e.target.value)) pick(e.target.value); });
+  document.addEventListener('pointerdown', (e) => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('#whenBtn, .act[data-act="date"]')) closePop(); });
+  pop.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closePop(); }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const items = [...pop.querySelectorAll('button, input')];
+      const i = items.indexOf(document.activeElement);
+      items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
+    }
+  });
+
+  /* ---------- the entry box ---------- */
+  const entry = $('#entry');
+  const preview = $('#preview');
+
+  function updateWhen() {
+    const lbl = $('#whenLabel');
+    const set = entryDate !== undefined;
+    $('#whenBtn').classList.toggle('set', set);
+    lbl.hidden = !set;
+    lbl.textContent = set ? whenLabel(entryDate) : '';
+    $('#whenBtn').title = set ? `New tasks go to ${whenLabel(entryDate)}` : 'Choose a day';
+    updatePreview();
+  }
+  const fallbackDate = () => (entryDate === undefined ? today : entryDate);
+
+  function updatePreview() {
+    const raw = entry.value;
+    const items = raw.trim() ? readEntry(raw, fallbackDate()) : [];
+    const worth = items.length > 1 || items.some((i) => i.set);
+    preview.hidden = !worth;
+    if (!worth) return;
+    preview.textContent = '';
+    for (const it of items) {
+      const r = document.createElement('div');
+      r.className = 'pv-row';
+      const a = document.createElement('span'); a.className = 'pv-text'; a.textContent = it.text;
+      const b = document.createElement('span'); b.className = 'pv-date' + (it.set ? '' : ' default'); b.textContent = whenLabel(it.date);
+      r.append(a, b);
+      preview.appendChild(r);
+    }
+    const foot = document.createElement('div');
+    foot.className = 'pv-foot';
+    const hint = document.createElement('span');
+    hint.textContent = items.length > 1 ? `Enter adds ${items.length} tasks` : 'Enter to add';
+    const asTyped = document.createElement('button');
+    asTyped.type = 'button'; asTyped.id = 'asTyped';
+    asTyped.textContent = 'Add as typed';
+    foot.append(hint, asTyped);
+    preview.appendChild(foot);
+  }
+
+  function addFromEntry(asTyped) {
+    const raw = entry.value;
+    if (!raw.trim()) return;
+    const items = asTyped ? [{ text: tidy(raw), date: fallbackDate() }] : readEntry(raw, fallbackDate());
+    for (const it of items) addTask(it.text, it.date);
+    entry.value = '';
+    updatePreview();
+    const elsewhere = items.filter((i) => i.date !== today);
+    if (items.length > 1) toast(elsewhere.length ? `Added ${items.length} tasks` : `Added ${items.length} tasks to today`);
+    else if (elsewhere.length) toast(`Added to ${whenLabel(items[0].date)}`);
+  }
+
+  entry.addEventListener('input', updatePreview);
+  entry.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addFromEntry(e.shiftKey); }
+    else if (e.key === 'Escape') {
+      if (entry.value) { entry.value = ''; updatePreview(); }
+      else if (entryDate !== undefined) { entryDate = undefined; updateWhen(); }
+      else entry.blur();
+    }
+  });
+  entry.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== entry) preview.hidden = true; }, 150));
+  entry.addEventListener('focus', updatePreview);
+  preview.addEventListener('mousedown', (e) => e.preventDefault());
+  preview.addEventListener('click', (e) => { if (e.target.id === 'asTyped') { addFromEntry(true); entry.focus(); } });
+
+  $('#whenBtn').addEventListener('mousedown', (e) => e.preventDefault());
+  $('#whenBtn').addEventListener('click', (e) => {
+    if (!pop.hidden) { closePop(); return; }
+    openPop(e.currentTarget.getBoundingClientRect(), (when) => {
+      entryDate = when === today ? undefined : when;
+      updateWhen();
+      entry.focus();
+    });
+  });
+
+  /* ---------- editing a task ---------- */
   function startEdit(row) {
     const t = tasks.get(row.dataset.id);
     if (!t || editingId) return;
@@ -670,20 +1015,15 @@ dialog a { color: var(--ink); font-weight: 600; }
     row._finish = finish;
   }
 
-  function pickDate(t, r) {
-    const p = $('#datePicker');
-    p.style.left = `${Math.min(r.left, window.innerWidth - 20)}px`;
-    p.style.top = `${r.bottom}px`;
-    p.value = shownOn(t) || today;
-    p.min = today;
-    p.onchange = () => { if (isDate(p.value)) { const cur = tasks.get(t.id); if (cur) moveTo(cur, p.value); } };
-    try { p.showPicker(); } catch { p.focus(); p.click(); }
+  function deleteWithUndo(t) {
+    const copy = { ...t };
+    remove(t.id);
+    toast('Deleted', 'Undo', () => commit({ ...copy }));
   }
 
-  /* Keep focus in the text while pressing the row's buttons */
-  board.addEventListener('mousedown', (e) => { if (e.target.closest('.act')) e.preventDefault(); });
-
-  board.addEventListener('click', (e) => {
+  const main = $('.main');
+  main.addEventListener('mousedown', (e) => { if (e.target.closest('.act')) e.preventDefault(); });
+  main.addEventListener('click', (e) => {
     if (Date.now() - lastDragEnd < 250) return;
     const row = e.target.closest('.task');
     if (!row) return;
@@ -696,45 +1036,24 @@ dialog a { color: var(--ink); font-weight: 600; }
       const cur = tasks.get(t.id);
       if (!cur) return;
       if (act.dataset.act === 'delete') deleteWithUndo(cur);
-      else pickDate(cur, rect);
+      else openPop(rect, (when) => { const c = tasks.get(t.id); if (c) moveTo(c, when); });
       return;
     }
-    if (e.target.closest('.check')) { if (row._finish) row._finish(true); const cur = tasks.get(t.id); if (cur) toggleDone(cur); return; }
+    if (e.target.closest('.check')) {
+      if (row._finish) row._finish(true);
+      const cur = tasks.get(t.id);
+      if (cur) toggleDone(cur);
+      return;
+    }
     if (!row.classList.contains('editing')) startEdit(row);
-  });
-
-  board.addEventListener('keydown', (e) => {
-    const input = e.target.closest('.add');
-    if (!input) return;
-    if (e.key === 'Enter' && !e.isComposing) {
-      e.preventDefault();
-      addTask(input.value, input.closest('.list').dataset.date || null);
-      input.value = '';
-    } else if (e.key === 'Escape') { input.value = ''; input.blur(); }
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
     const tag = (e.target.tagName || '').toLowerCase();
-    if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable || document.querySelector('dialog[open]')) return;
-    if (e.key === 'n' || e.key === 'N') {
-      e.preventDefault();
-      if (!visibleDays().includes(today)) { offset = 0; render(); }
-      focusToday();
-    }
+    if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable || document.querySelector('dialog[open]') || !pop.hidden) return;
+    if (e.key === 'n' || e.key === 'N' || e.key === '/') { e.preventDefault(); entry.focus(); }
   });
-
-  function focusToday() {
-    const input = board.querySelector(`.list[data-date="${today}"] .add`);
-    if (input) input.focus();
-  }
-
-  $('#prevBtn').onclick = () => { offset -= 1; render(); };
-  $('#nextBtn').onclick = () => { offset += 1; render(); };
-  $('#todayBtn').onclick = () => { offset = 0; render(); };
-
-  let resizeTimer;
-  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 120); });
 
   /* ---------- toast ---------- */
   let toastTimer;
@@ -754,12 +1073,6 @@ dialog a { color: var(--ink); font-weight: 600; }
     el.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove('show'), actionLabel ? 5000 : 2200);
-  }
-
-  function deleteWithUndo(t) {
-    const copy = { ...t };
-    remove(t.id);
-    toast('Deleted', 'Undo', () => commit({ ...copy }));
   }
 
   /* ---------- GitHub sync ---------- */
@@ -850,15 +1163,8 @@ dialog a { color: var(--ink); font-weight: 600; }
   let chain = Promise.resolve();
   let syncTimer = null;
   let lastSync = 0;
-
-  function queueSync(ms) {
-    clearTimeout(syncTimer);
-    syncTimer = setTimeout(() => sync(), ms);
-  }
-  function sync() {
-    chain = chain.then(runSync, runSync);
-    return chain;
-  }
+  function queueSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(), ms); }
+  function sync() { chain = chain.then(runSync, runSync); return chain; }
 
   async function runSync() {
     clearTimeout(syncTimer);
@@ -901,19 +1207,16 @@ dialog a { color: var(--ink); font-weight: 600; }
     btn.title = state === 'ok' && cfg ? `Synced with ${cfg.repo}` : state === 'offline' ? 'Offline. Changes are kept on this device and sent when you’re back online.' : (msg || label);
   }
 
-  setInterval(() => {
-    if (cfg && document.visibilityState === 'visible' && !dirty.size) sync();
-  }, POLL_MS);
+  setInterval(() => { if (cfg && document.visibilityState === 'visible' && !dirty.size) sync(); }, POLL_MS);
   const wake = () => { if (cfg && document.visibilityState === 'visible' && Date.now() - lastSync > 5000) sync(); };
   document.addEventListener('visibilitychange', wake);
   window.addEventListener('focus', wake);
   window.addEventListener('online', () => cfg && sync());
 
   /* New day: unfinished tasks roll forward to today */
-  setInterval(() => {
-    const now = ymd(new Date());
-    if (now !== today) { today = now; viewKey = ''; render(); }
-  }, 30000);
+  setInterval(() => { const now = ymd(new Date()); if (now !== today) { today = now; render(); } }, 30000);
+  /* Finish deferred renders after an edit or drag */
+  setInterval(() => { if (renderQueued) render(); }, 400);
 
   /* ---------- settings ---------- */
   const settings = $('#settings');
@@ -983,14 +1286,18 @@ dialog a { color: var(--ink); font-weight: 600; }
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 
-  /* Finish deferred renders after an edit or drag */
-  setInterval(() => { if (renderQueued) render(); }, 400);
+  const setPlaceholder = () => { entry.placeholder = innerWidth < 600 ? 'Add a task' : 'Add a task, e.g. “call Ian Thursday”'; };
+  setPlaceholder();
+  window.addEventListener('resize', setPlaceholder);
+
+  /* For checking the date reader from the console */
+  window.taskboard = { readEntry: (s) => readEntry(s, today) };
 
   /* ---------- start ---------- */
   loadLocal();
   render();
   if (cfg) sync(); else setStatus('local');
-  if (matchMedia('(hover: hover) and (pointer: fine)').matches) focusToday();
+  if (matchMedia('(hover: hover) and (pointer: fine)').matches) entry.focus();
 })();
 </script>
 </body>
