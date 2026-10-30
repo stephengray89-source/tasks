@@ -48,6 +48,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body {
   background: var(--paper);
@@ -222,7 +223,8 @@ dialog a { color: var(--ink); font-weight: 600; }
 .field input:focus { border-color: var(--ink); outline: none; }
 .msg { min-height: 1.4em; margin: 4px 0 14px; }
 .msg.error { color: var(--danger); }
-.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.row .btn { padding: 0 10px; }
 .row .spacer { flex: 1; }
 .primary { background: var(--ink); color: var(--paper); }
 .primary:hover { background: var(--ink); opacity: .9; }
