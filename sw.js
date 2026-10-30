@@ -1,8 +1,8 @@
 /* Lets Tasks open like an app and work offline.
    Always tries the network first so updates arrive straight away; falls back to the saved copy offline.
    GitHub API calls (task sync) are never touched. */
-const CACHE = 'tasks-v2';
-const SHELL = ['./', 'index.html', 'sortable.min.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
+const CACHE = 'tasks-v3';
+const SHELL = ['./', 'index.html', 'sortable.min.js', 'phrases.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -21,7 +21,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch {}
-  const n = Number(d.overdue) || 0;
+  const n = Number(d.badge != null ? d.badge : d.overdue) || 0;
   const nav = self.navigator;
   const badge = n > 0 && nav.setAppBadge ? nav.setAppBadge(n) : nav.clearAppBadge ? nav.clearAppBadge() : null;
   const note = self.registration.showNotification(d.title || 'Tasks', {

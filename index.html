@@ -97,11 +97,7 @@ button { font: inherit; color: inherit; }
 .when.set { background: var(--sky); color: var(--ink); }
 .when svg { width: 18px; height: 18px; }
 
-.preview {
-  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 25;
-  background: var(--paper); border: 1.5px solid var(--line); border-radius: 12px;
-  box-shadow: var(--shadow); padding: 6px;
-}
+.preview { padding: 2px 0 4px; }
 .pv-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 8px 10px; font-size: 16px; font-weight: 500; }
 .pv-row .pv-text { min-width: 0; overflow-wrap: anywhere; }
 .pv-row .pv-date { flex: none; color: var(--ink); font-weight: 700; font-size: 14px; }
@@ -138,7 +134,7 @@ button { font: inherit; color: inherit; }
 .sync[data-state="local"] .label, .sync[data-state="error"] .label, .sync[data-state="offline"] .label { display: inline; }
 
 /* Two views, switched by the tab bar: Today, and Upcoming (only days with something on) */
-.main { display: block; padding-bottom: 120px; }
+.main { display: block; padding-top: max(14px, env(safe-area-inset-top)); padding-bottom: 160px; }
 body[data-view="today"] .up-pane, body[data-view="upcoming"] .today-pane { display: none; }
 .today-head, .up-head {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -193,6 +189,88 @@ body.dragging .tabbar { display: none; }
 .group-head { display: flex; align-items: baseline; gap: 8px; padding: 16px 12px 4px; }
 .group-head .gd { font-size: 16px; font-weight: 800; }
 .group-head .gs { font-size: 14px; font-weight: 500; color: var(--slate); }
+
+
+/* Settings icon inside the Today / Upcoming header */
+.head-right { display: flex; align-items: center; gap: 2px; margin-right: -8px; }
+.today-head .sync { color: var(--band-ink); }
+.today-head .sync:hover { background: rgba(255, 255, 255, .12); }
+.today-head .sync .dot { box-shadow: 0 0 0 2px var(--band); }
+.up-head .sync:hover { background: var(--line); }
+.up-head .sync .dot { box-shadow: 0 0 0 2px var(--wash); }
+.today-head .sync[data-state="error"] { color: var(--band-ink); }
+
+/* + button */
+.fab {
+  position: fixed; z-index: 35;
+  right: max(20px, calc((100vw - 760px) / 2 + 24px));
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 76px);
+  width: 58px; height: 58px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--ink); color: var(--paper);
+  display: grid; place-items: center; cursor: pointer;
+  box-shadow: 0 8px 22px rgba(4, 30, 66, .28);
+}
+.fab svg { width: 26px; height: 26px; }
+.fab:active { transform: scale(.96); }
+body.dragging .fab, body.adding .fab, body.adding .tabbar { display: none; }
+
+/* Add panel: sits on top of the keyboard */
+.sheet-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(4, 30, 66, .28); }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 55;
+  max-width: 640px; margin: 0 auto;
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  background: var(--paper); border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 30px rgba(4, 30, 66, .18);
+}
+body.kb .sheet { padding-bottom: 10px; }
+.sheet-row { display: flex; align-items: center; gap: 10px; }
+#entry {
+  flex: 1; min-width: 0; height: 44px; padding: 0 4px;
+  border: 0; outline: 0; background: transparent;
+  font: inherit; font-size: 16px; font-weight: 500; color: var(--ink);
+}
+#entry::placeholder { color: var(--mute); opacity: 1; }
+.send {
+  flex: none; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--ink); color: var(--paper); display: grid; place-items: center; cursor: pointer;
+}
+.send svg { width: 18px; height: 18px; }
+.send:disabled { opacity: .3; cursor: default; }
+.chips {
+  display: flex; gap: 6px; overflow-x: auto; margin: 0 -14px; padding: 8px 14px 2px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.chips::-webkit-scrollbar { display: none; }
+.wchip {
+  flex: none; position: relative; height: 34px; padding: 0 12px;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1.5px solid var(--line); border-radius: 999px; background: var(--paper);
+  color: var(--ink); font-size: 13.5px; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.wchip svg { width: 15px; height: 15px; }
+#pickChip { padding: 0 10px; }
+#pickChip:not(.on) #pickLabel { display: none; }
+.wchip.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+#pickChip input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+body.adding .toast { top: max(14px, env(safe-area-inset-top)); bottom: auto; }
+
+/* Phrase of the week */
+.phrase-line {
+  display: block; width: 100%; margin-top: 6px; padding: 10px 12px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--slate); font-size: 13px; font-weight: 500; text-align: center; cursor: pointer;
+}
+.phrase-line b { color: var(--ink); font-weight: 700; }
+.phrase-line:hover { background: var(--wash); }
+.ph-nav { display: flex; align-items: center; justify-content: space-between; margin: -8px -10px 4px; }
+.ph-week { font-size: 13px; font-weight: 600; color: var(--slate); }
+#phrase h2 { margin: 0 0 8px; font-size: 24px; }
+#phrase h3 { margin: 16px 0 6px; font-size: 13px; font-weight: 800; color: var(--slate); }
+#phrase p { margin: 0; }
+.ph-meaning { font-size: 16px; font-weight: 500; color: var(--ink) !important; }
+.ph-origin { margin-top: 6px !important; font-size: 14px; }
+.ph-say { list-style: none; padding: 0; margin: 0; }
+.ph-say li { margin: 0 0 8px; padding-left: 12px; border-left: 2px solid var(--sky); font-size: 15px; font-weight: 500; line-height: 1.4; color: var(--ink); }
 
 /* A task is a sliding face over an action layer (revealed by swiping) */
 .task {
@@ -398,26 +476,6 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
 </style>
 </head>
 <body>
-<header class="top">
-  <div class="wrap top-row">
-    <div class="capture-wrap">
-      <div class="capture">
-        <span class="plus" aria-hidden="true">+</span>
-        <input id="entry" type="text" autocomplete="off" autocapitalize="sentences" spellcheck="true"
-               placeholder="Add a task, e.g. &ldquo;call Ian Thursday&rdquo;" aria-label="Add a task">
-        <button class="when" id="whenBtn" type="button" aria-label="Choose a day for new tasks" title="Choose a day">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>
-          <span class="lbl" id="whenLabel" hidden></span>
-        </button>
-      </div>
-      <div class="preview" id="preview" hidden></div>
-    </div>
-    <button class="btn sync" id="syncBtn" data-state="local" title="Settings" aria-label="Settings">
-      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="dot"></span></span>
-      <span class="label" id="syncText">Not synced</span>
-    </button>
-  </div>
-</header>
 
 <main class="wrap main">
   <section class="today-pane" aria-labelledby="todayTitle">
@@ -426,7 +484,13 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
         <h1 id="todayTitle">Today</h1>
         <div class="date" id="todayDate"></div>
       </div>
-      <div class="count" id="todayCount"></div>
+      <div class="head-right">
+        <span class="count" id="todayCount"></span>
+        <button class="btn sync" id="syncBtn" type="button" data-state="local" title="Settings" aria-label="Settings">
+          <span class="label" id="syncText">Not synced</span>
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="dot"></span></span>
+        </button>
+      </div>
     </div>
     <div class="caught" id="caughtUp" hidden>
       <svg viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26" fill="currentColor"/><path class="cut" d="M17.5 28.5l7 7 14-15" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -435,6 +499,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
       <button class="next" id="nextUp" type="button" hidden></button>
     </div>
     <div class="list" id="todayList"></div>
+    <button class="phrase-line" id="phraseLine" type="button" hidden>This week&rsquo;s phrase: <b id="phraseTerm"></b></button>
   </section>
   <section class="up-pane" aria-labelledby="upTitle">
     <div class="up-head">
@@ -442,7 +507,13 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
         <h2 id="upTitle">Upcoming</h2>
         <div class="date" id="upSub">From tomorrow</div>
       </div>
-      <div class="count" id="upCount"></div>
+      <div class="head-right">
+        <span class="count" id="upCount"></span>
+        <button class="btn sync" id="syncBtn2" type="button" data-state="local" title="Settings" aria-label="Settings">
+          <span class="label">Not synced</span>
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="dot"></span></span>
+        </button>
+      </div>
     </div>
     <div id="upcoming"></div>
   </section>
@@ -458,6 +529,32 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     <span>Upcoming</span>
   </button>
 </nav>
+
+<button class="fab" id="fab" type="button" aria-label="Add a task" title="Add a task (N)">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-label="Add a task" hidden>
+  <div class="sheet-row">
+    <input id="entry" type="text" autocomplete="off" autocapitalize="sentences" spellcheck="true" placeholder="Add a task" aria-label="Task">
+    <button class="send" id="sendBtn" type="button" aria-label="Add task" disabled>
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16V4M5 9l5-5 5 5"/></svg>
+    </button>
+  </div>
+  <div class="preview" id="preview" hidden></div>
+  <div class="chips" id="whenChips" role="group" aria-label="Day">
+    <button class="wchip on" type="button" data-when="today">Today</button>
+    <button class="wchip" type="button" data-when="tomorrow">Tomorrow</button>
+    <button class="wchip" type="button" data-when="nextweek">Next week</button>
+    <button class="wchip" type="button" data-when="later">Later</button>
+    <span class="wchip" id="pickChip" data-when="pick">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>
+      <span id="pickLabel">Pick a date</span>
+      <input type="date" id="sheetDate" aria-label="Pick a date">
+    </span>
+  </div>
+</div>
 
 <div class="dropbar" id="dropbar" aria-hidden="true"></div>
 
@@ -510,24 +607,43 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
   <div class="row close-row"><button class="btn quiet" id="helpBtn" type="button">How it works</button><span class="spacer"></span><button class="btn" id="closeSettings" type="button">Close</button></div>
 </dialog>
 
+<dialog id="phrase" aria-labelledby="phTitle">
+  <div class="ph-nav">
+    <button class="btn icon" id="phPrev" type="button" aria-label="Previous week"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg></button>
+    <span class="ph-week" id="phWeek">This week</span>
+    <button class="btn icon" id="phNext" type="button" aria-label="Next week"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg></button>
+  </div>
+  <h2 id="phTitle"></h2>
+  <p class="ph-meaning" id="phMeaning"></p>
+  <p class="ph-origin" id="phOrigin"></p>
+  <h3>Say it</h3>
+  <ul class="ph-say" id="phSay"></ul>
+  <h3>Watch out</h3>
+  <p id="phWatch"></p>
+  <h3>This week</h3>
+  <p id="phChallenge"></p>
+  <div class="row close-row"><span class="spacer"></span><button class="btn primary" id="closePhrase" type="button">Close</button></div>
+</dialog>
+
 <dialog id="help" aria-labelledby="helpTitle">
   <h2 id="helpTitle">How it works</h2>
   <ul>
-    <li>Type a task and press <b>Enter</b>. The box stays ready for the next one. Press <b>N</b> to jump to it.</li>
+    <li>Tap <b>+</b> to add a task. It goes on Today unless you pick another day. Press <b>Enter</b> to add it and keep typing the next one. On a keyboard, <b>N</b> opens the box.</li>
     <li>Switch between <b>Today</b> and <b>Upcoming</b> with the buttons at the bottom, or <b>T</b> and <b>U</b> on a keyboard.</li>
-    <li>Say or type when: <b>Thursday</b>, <b>next Thursday</b>, <b>tomorrow</b>, <b>next week</b>, <b>5 Nov</b>, <b>in 3 days</b>, <b>someday</b>. The task goes to that day.</li>
+    <li>Say or type when: <b>Thursday</b>, <b>next Thursday</b>, <b>tomorrow</b>, <b>next week</b>, <b>5 Nov</b>, <b>in 3 days</b>, <b>someday</b>. The task goes to that day. Or tap a day button under the box.</li>
     <li>A list becomes separate tasks: <b>call Ian, send Pete the deck and book the car service</b>. Check the preview, or press <b>Shift+Enter</b> to add it exactly as typed.</li>
     <li>The calendar button in the box sets the day for everything you add until you change it.</li>
     <li>Swipe a task with a finger, or two fingers on a trackpad. <b>Left</b> ticks it off. <b>All the way right</b> pushes it to the next working day. <b>Halfway right</b> lets you pick a day.</li>
     <li>Drag a task to reorder it or move it to another day. Day buttons appear at the bottom while you drag. On a phone, press and hold first.</li>
     <li>Anything not done moves to today by itself. After three days it's marked overdue.</li>
     <li>Click a task to edit it. Clear the text to delete it.</li>
-    <li>The app icon on your phone can show how many tasks are overdue. Turn it on in Settings, from the Home Screen app.</li>
+    <li>The app icon on your phone can show how many tasks you have today. Turn it on in Settings, from the Home Screen app.</li>
   </ul>
   <div class="row"><span class="spacer"></span><button class="btn primary" id="closeHelp" type="button">Got it</button></div>
 </dialog>
 
 <script src="sortable.min.js"></script>
+<script src="phrases.js"></script>
 <script>
 (() => {
   'use strict';
@@ -806,7 +922,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
   function render() {
     if (editingId || pointerDown || swipe || document.body.classList.contains('dragging')) { renderQueued = true; return; }
     renderQueued = false;
-    if (shownToday !== today) { shownToday = today; buildDropbar(); updateWhen(); }
+    if (shownToday !== today) { shownToday = today; buildDropbar(); updateWhen(); renderPhraseLine(); }
 
     const d = parseYmd(today);
     $('#todayDate').textContent = `${DAY_NAMES[d.getDay()]} ${d.getDate()} ${MONTHS_LONG[d.getMonth()]}`;
@@ -851,6 +967,43 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     if (entryDate !== undefined && entryDate !== null && entryDate <= today) { entryDate = undefined; updateWhen(); }
     updateBadge();
   }
+
+  /* ---------- phrase of the week ---------- */
+  const PH = window.PHRASES;
+  let phOffset = 0;
+  function weekIndex(offset) {
+    if (!PH || !PH.list || !PH.list.length) return -1;
+    const n = Math.floor(daysBetween(PH.start, today) / 7) + offset;
+    return ((n % PH.list.length) + PH.list.length) % PH.list.length;
+  }
+  function renderPhraseLine() {
+    const i = weekIndex(0);
+    $('#phraseLine').hidden = i < 0;
+    if (i >= 0) $('#phraseTerm').textContent = PH.list[i].t;
+  }
+  function showPhrase(offset) {
+    const i = weekIndex(offset);
+    if (i < 0) return;
+    phOffset = offset;
+    const p = PH.list[i];
+    $('#phWeek').textContent = offset === 0 ? 'This week' : offset === -1 ? 'Last week' : offset === 1 ? 'Next week' : offset < 0 ? `${-offset} weeks ago` : `In ${offset} weeks`;
+    $('#phTitle').textContent = p.t;
+    $('#phMeaning').textContent = p.m;
+    $('#phOrigin').textContent = p.o || '';
+    $('#phOrigin').hidden = !p.o;
+    const ul = $('#phSay');
+    ul.textContent = '';
+    for (const line of p.s) { const li = document.createElement('li'); li.textContent = line; ul.appendChild(li); }
+    $('#phWatch').textContent = p.w;
+    $('#phChallenge').textContent = p.c;
+    const d = $('#phrase');
+    if (!d.open) d.showModal();
+    d.scrollTop = 0;
+  }
+  $('#phraseLine').onclick = () => showPhrase(0);
+  $('#phPrev').onclick = () => showPhrase(phOffset - 1);
+  $('#phNext').onclick = () => showPhrase(phOffset + 1);
+  $('#closePhrase').onclick = () => $('#phrase').close();
 
   /* ---------- views ---------- */
   let view = 'today';          // the app always opens on Today
@@ -1042,7 +1195,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     pick(w === 'today' ? today : w === 'tomorrow' ? addDays(today, 1) : w === 'nextweek' ? weekdayNextWeek(1) : null);
   });
   $('#popDate').addEventListener('change', (e) => { if (isDate(e.target.value)) pick(e.target.value); });
-  document.addEventListener('pointerdown', (e) => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('#whenBtn, .act[data-act="date"]')) closePop(); });
+  document.addEventListener('pointerdown', (e) => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('.act[data-act="date"]')) closePop(); });
   pop.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); closePop(); }
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -1053,23 +1206,29 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     }
   });
 
-  /* ---------- the entry box ---------- */
+  /* ---------- adding tasks: the + button opens a panel that sits on the keyboard ---------- */
   const entry = $('#entry');
   const preview = $('#preview');
+  const sheet = $('#sheet');
+  const backdrop = $('#sheetBackdrop');
+  const sheetDate = $('#sheetDate');
 
+  /* entryDate: undefined = today (the default), null = Later, or a date */
   function updateWhen() {
-    const lbl = $('#whenLabel');
-    const set = entryDate !== undefined;
-    $('#whenBtn').classList.toggle('set', set);
-    lbl.hidden = !set;
-    lbl.textContent = set ? whenLabel(entryDate) : '';
-    $('#whenBtn').title = set ? `New tasks go to ${whenLabel(entryDate)}` : 'Choose a day';
+    const on = entryDate === undefined ? 'today'
+      : entryDate === null ? 'later'
+      : entryDate === addDays(today, 1) ? 'tomorrow'
+      : entryDate === weekdayNextWeek(1) ? 'nextweek' : 'pick';
+    document.querySelectorAll('#whenChips .wchip').forEach((c) => c.classList.toggle('on', c.dataset.when === on));
+    $('#pickLabel').textContent = on === 'pick' ? whenLabel(entryDate) : 'Pick a date';
+    sheetDate.min = today;
     updatePreview();
   }
   const fallbackDate = () => (entryDate === undefined ? today : entryDate);
 
   function updatePreview() {
     const raw = entry.value;
+    $('#sendBtn').disabled = !raw.trim();
     const items = raw.trim() ? readEntry(raw, fallbackDate()) : [];
     const worth = items.length > 1 || items.some((i) => i.set);
     preview.hidden = !worth;
@@ -1086,7 +1245,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     const foot = document.createElement('div');
     foot.className = 'pv-foot';
     const hint = document.createElement('span');
-    hint.textContent = items.length > 1 ? `Enter adds ${items.length} tasks` : 'Enter to add';
+    hint.textContent = items.length > 1 ? `Adds ${items.length} tasks` : 'Day read from your words';
     const asTyped = document.createElement('button');
     asTyped.type = 'button'; asTyped.id = 'asTyped';
     asTyped.textContent = 'Add as typed';
@@ -1107,28 +1266,62 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     else if (view === 'upcoming') toast('Added to Today');
   }
 
+  /* Keep the panel just above the on-screen keyboard */
+  function placeSheet() {
+    const vv = window.visualViewport;
+    const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
+    sheet.style.bottom = `${kb}px`;
+    document.body.classList.toggle('kb', kb > 40);
+  }
+  if (window.visualViewport) {
+    visualViewport.addEventListener('resize', () => { if (!sheet.hidden) placeSheet(); });
+    visualViewport.addEventListener('scroll', () => { if (!sheet.hidden) placeSheet(); });
+  }
+
+  function openSheet() {
+    closePop();
+    entryDate = undefined;            // new tasks always start on Today
+    sheet.hidden = false;
+    backdrop.hidden = false;
+    document.body.classList.add('adding');
+    entry.focus();                    // same tap, so the phone keyboard comes up
+    updateWhen();
+    placeSheet();
+  }
+  function closeSheet() {
+    if (sheet.hidden) return;
+    entry.blur();
+    sheet.hidden = true;
+    backdrop.hidden = true;
+    document.body.classList.remove('adding', 'kb');
+    entryDate = undefined;
+    updateWhen();
+  }
+
+  $('#fab').addEventListener('click', openSheet);
+  backdrop.addEventListener('click', closeSheet);
   entry.addEventListener('input', updatePreview);
   entry.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addFromEntry(e.shiftKey); }
-    else if (e.key === 'Escape') {
-      if (entry.value) { entry.value = ''; updatePreview(); }
-      else if (entryDate !== undefined) { entryDate = undefined; updateWhen(); }
-      else entry.blur();
-    }
+    else if (e.key === 'Escape') { e.preventDefault(); if (entry.value) { entry.value = ''; updatePreview(); } else closeSheet(); }
   });
-  entry.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== entry) preview.hidden = true; }, 150));
-  entry.addEventListener('focus', updatePreview);
-  preview.addEventListener('mousedown', (e) => e.preventDefault());
+  /* Buttons in the panel keep the keyboard up */
+  sheet.addEventListener('mousedown', (e) => { if (e.target.closest('button')) e.preventDefault(); });
+  $('#sendBtn').addEventListener('click', () => { addFromEntry(false); entry.focus(); });
   preview.addEventListener('click', (e) => { if (e.target.id === 'asTyped') { addFromEntry(true); entry.focus(); } });
-
-  $('#whenBtn').addEventListener('mousedown', (e) => e.preventDefault());
-  $('#whenBtn').addEventListener('click', (e) => {
-    if (!pop.hidden) { closePop(); return; }
-    openPop(e.currentTarget.getBoundingClientRect(), (when) => {
-      entryDate = when === today ? undefined : when;
-      updateWhen();
-      entry.focus();
-    });
+  $('#whenChips').addEventListener('click', (e) => {
+    const c = e.target.closest('button.wchip');
+    if (!c) return;
+    const w = c.dataset.when;
+    entryDate = w === 'today' ? undefined : w === 'tomorrow' ? addDays(today, 1) : w === 'nextweek' ? weekdayNextWeek(1) : null;
+    updateWhen();
+    entry.focus();
+  });
+  sheetDate.addEventListener('click', () => { try { sheetDate.showPicker(); } catch {} });
+  sheetDate.addEventListener('change', () => {
+    if (isDate(sheetDate.value)) { entryDate = sheetDate.value === today ? undefined : sheetDate.value; updateWhen(); }
+    sheetDate.value = '';
+    entry.focus();
   });
 
   /* ---------- editing a task ---------- */
@@ -1209,7 +1402,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
     const tag = (e.target.tagName || '').toLowerCase();
     if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable || document.querySelector('dialog[open]') || !pop.hidden) return;
-    if (e.key === 'n' || e.key === 'N' || e.key === '/') { e.preventDefault(); entry.focus(); }
+    if (e.key === 'n' || e.key === 'N' || e.key === '/') { e.preventDefault(); openSheet(); }
     else if (e.key === '?') $('#help').showModal();
     else if (e.key === 't' || e.key === 'T') setView('today');
     else if (e.key === 'u' || e.key === 'U') setView('upcoming');
@@ -1513,12 +1706,14 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
 
   let statusMsg = '';
   function setStatus(state, msg) {
-    const btn = $('#syncBtn');
     const label = { local: 'Not synced', busy: dirty.size ? 'Saving…' : 'Syncing…', ok: 'Synced', offline: 'Offline', error: 'Sync problem' }[state];
-    btn.dataset.state = state;
-    $('#syncText').textContent = label;
     statusMsg = msg || '';
-    btn.title = state === 'ok' && cfg ? `Synced with ${cfg.repo}` : state === 'offline' ? 'Offline. Changes are kept on this device and sent when you’re back online.' : (msg || label);
+    const title = state === 'ok' && cfg ? `Synced with ${cfg.repo}` : state === 'offline' ? 'Offline. Changes are kept on this device and sent when you’re back online.' : (msg || label);
+    for (const btn of document.querySelectorAll('.sync')) {
+      btn.dataset.state = state;
+      btn.querySelector('.label').textContent = label;
+      btn.title = title;
+    }
   }
 
   setInterval(() => { if (cfg && document.visibilityState === 'visible' && !dirty.size) sync(); }, POLL_MS);
@@ -1549,11 +1744,11 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     refreshBadgeUI();
     if (!cfg) $('#tokenInput').focus();
   }
-  $('#syncBtn').onclick = openSettings;
+  document.querySelectorAll('.sync').forEach((b) => { b.onclick = () => { closeSheet(); openSettings(); }; });
   $('#closeSettings').onclick = () => settings.close();
   $('#helpBtn').onclick = () => { settings.close(); $('#help').showModal(); };
   $('#closeHelp').onclick = () => $('#help').close();
-  [settings, $('#help')].forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
+  [settings, $('#help'), $('#phrase')].forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
 
   $('#connectBtn').onclick = async () => {
     const m = $('#settingsMsg');
@@ -1603,14 +1798,15 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
   const pushSupported = () => window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   const pendingKey = () => store.get(KEY_PENDING, null);
 
-  function overdueCount() {
+  /* The badge is today's open count: due today, plus anything carried over */
+  function todayCount() {
     let n = 0;
-    for (const t of tasks.values()) if (!t.done && t.date && t.date < today) n++;
+    for (const t of tasks.values()) if (!t.done && t.date && t.date <= today) n++;
     return n;
   }
   let lastBadge = -1;
   function updateBadge() {
-    const n = overdueCount();
+    const n = todayCount();
     if (n === lastBadge) return;
     lastBadge = n;
     try {
@@ -1689,10 +1885,10 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     } else if (setupNeeded) {
       msg.textContent = 'One last step, needed once:';
     } else if (st === 'on') {
-      msg.textContent = 'On for this device. Shows your overdue count, updated each morning at 7:25.';
+      msg.textContent = 'On for this device. Shows how many tasks you have today, updated each morning at 7:25.';
       btn.textContent = 'Turn off';
     } else {
-      msg.textContent = 'Shows how many tasks are overdue, updated each morning at 7:25.';
+      msg.textContent = 'Shows how many tasks you have today, updated each morning at 7:25.';
       btn.textContent = 'Turn on';
     }
   }
@@ -1775,7 +1971,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 
-  const setPlaceholder = () => { entry.placeholder = innerWidth < 600 ? 'Add a task' : 'Add a task, e.g. “call Ian Thursday”'; };
+  const setPlaceholder = () => { entry.placeholder = innerWidth < 600 ? 'What needs doing?' : 'What needs doing? e.g. “call Ian Thursday”'; };
   setPlaceholder();
   window.addEventListener('resize', setPlaceholder);
 
@@ -1788,7 +1984,6 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
   loadLocal();
   render();
   if (cfg) sync(); else setStatus('local');
-  if (matchMedia('(hover: hover) and (pointer: fine)').matches) entry.focus();
 })();
 </script>
 </body>
