@@ -1487,6 +1487,7 @@ dialog a { color: var(--ink); font-weight: 700; }
   window.taskboard = { readEntry: (s) => readEntry(s, today) };
 
   /* ---------- start ---------- */
+  if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   loadLocal();
   render();
   if (cfg) sync(); else setStatus('local');
