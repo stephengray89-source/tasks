@@ -609,9 +609,10 @@ dialog a { color: var(--ink); font-weight: 700; }
     store.set(KEY.sha, sha);
   }
 
-  /* Unfinished tasks from past days show today */
+  /* Unfinished tasks from past days show today; done tasks show on the day they were done */
   function shownOn(t) {
-    if (!t.done && t.date && t.date < today) return today;
+    if (t.done) return t.doneAt || t.date;
+    if (t.date && t.date < today) return today;
     return t.date;
   }
   const byOrder = (a, b) => (a.order - b.order) || a.createdAt.localeCompare(b.createdAt);
