@@ -1,0 +1,996 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tasks</title>
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0A1628" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tasks">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #FFFFFF;
+  --wash: #F2F5F9;
+  --ink: #041E42;
+  --slate: #55657B;
+  --mute: #98A4B5;
+  --line: #DFE5ED;
+  --sky: #D6E3F3;
+  --band: #041E42;
+  --band-ink: #FFFFFF;
+  --danger: #B42318;
+  --shadow: 0 10px 28px rgba(4, 30, 66, .18);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0A1628;
+    --wash: #12223A;
+    --ink: #E9EFF7;
+    --slate: #A4B2C5;
+    --mute: #66778F;
+    --line: #1F3352;
+    --sky: #1D3658;
+    --band: #D6E3F3;
+    --band-ink: #041E42;
+    --danger: #F2877D;
+    --shadow: 0 10px 28px rgba(0, 0, 0, .45);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Figtree, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* Top bar */
+.bar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 24px 10px;
+  padding-top: max(14px, env(safe-area-inset-top));
+  background: var(--paper);
+}
+.nav, .tools { display: flex; align-items: center; gap: 4px; }
+.btn {
+  height: 34px; min-width: 34px; padding: 0 12px;
+  border: 0; border-radius: 8px; background: transparent;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn:hover { background: var(--wash); }
+.btn.icon { padding: 0; width: 34px; color: var(--slate); }
+.btn.icon:hover { color: var(--ink); }
+.btn svg { width: 18px; height: 18px; }
+#todayBtn[aria-pressed="true"] { color: var(--slate); }
+.sync { color: var(--slate); font-weight: 500; font-size: 14px; }
+.sync .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mute); flex: none; }
+.sync[data-state="ok"] .dot { background: var(--ink); }
+.sync[data-state="busy"] .dot { background: var(--slate); }
+.sync[data-state="error"] { color: var(--danger); }
+.sync[data-state="error"] .dot { background: var(--danger); }
+
+/* Board */
+.board {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+  gap: 0 18px;
+  padding: 6px 24px 48px;
+  min-height: calc(100vh - 60px);
+  min-height: calc(100dvh - 60px);
+}
+.col { display: flex; flex-direction: column; min-width: 0; }
+.head { padding: 12px 12px 11px; border-radius: 8px; margin-bottom: 6px; }
+.dow { font-size: 22px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.1; }
+.dmy { font-size: 14px; font-weight: 500; color: var(--slate); margin-top: 3px; }
+.col.today .head { background: var(--band); color: var(--band-ink); }
+.col.today .dmy { color: inherit; opacity: .72; }
+.col.past .head { opacity: .55; }
+.col.later { background: var(--wash); border-radius: 10px; padding: 0 6px; }
+.col.later .head { padding-left: 6px; padding-right: 6px; }
+
+.list {
+  flex: 1;
+  display: flex; flex-direction: column;
+  min-height: 64px;
+  padding-bottom: 32px;
+}
+.task {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 7px 6px 7px 10px;
+  border-radius: 8px;
+  cursor: grab;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.task:hover { background: var(--wash); }
+.col.later .task:hover { background: var(--paper); }
+.check {
+  flex: none; width: 20px; height: 20px; margin-top: 1px; padding: 0;
+  border: 2px solid var(--mute); border-radius: 50%; background: transparent;
+  display: grid; place-items: center; cursor: pointer;
+}
+.check:hover { border-color: var(--ink); }
+.check svg { width: 12px; height: 12px; opacity: 0; }
+.task.done .check { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.task.done .check svg { opacity: 1; }
+.text {
+  flex: 1; min-width: 0;
+  font-size: 16px; font-weight: 500; line-height: 1.4;
+  overflow-wrap: anywhere; white-space: pre-wrap;
+  outline: none; cursor: text;
+}
+.task.done .text { color: var(--mute); text-decoration: line-through; }
+.task.editing { background: var(--wash); cursor: auto; }
+.col.later .task.editing { background: var(--paper); }
+.task.editing .text { -webkit-user-select: text; user-select: text; }
+.since { flex: none; font-size: 13px; font-weight: 500; color: var(--slate); margin-top: 2px; white-space: nowrap; }
+.task.editing .since { display: none; }
+.task { position: relative; }
+/* Row buttons float over the end of the row on hover, and sit inline while editing */
+.acts {
+  position: absolute; right: 4px; top: 3px;
+  display: none; gap: 2px; border-radius: 6px;
+  background: var(--wash); box-shadow: -12px 0 10px -4px var(--wash);
+}
+.col.later .acts { background: var(--paper); box-shadow: -12px 0 10px -4px var(--paper); }
+@media (hover: hover) { .task:hover .acts { display: flex; } }
+.task.editing .acts { position: static; display: flex; flex: none; margin: -4px 0; background: transparent; box-shadow: none; }
+.act {
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--slate); cursor: pointer;
+  display: grid; place-items: center;
+}
+.act:hover { background: var(--line); color: var(--ink); }
+.act svg { width: 16px; height: 16px; }
+
+/* The add row sits first in the DOM but shows last, so dropped tasks always land above it */
+.add-row {
+  order: 999;
+  display: flex; align-items: center; gap: 10px;
+  padding: 2px 6px 2px 10px; border-radius: 8px;
+}
+.add-row .plus { flex: none; width: 20px; text-align: center; color: var(--mute); font-size: 20px; font-weight: 400; line-height: 1; }
+.add {
+  flex: 1; min-width: 0; height: 36px; padding: 0;
+  border: 0; background: transparent; outline: none;
+  font: inherit; font-size: 16px; font-weight: 500; color: var(--ink);
+}
+.add::placeholder { color: var(--mute); opacity: 1; }
+.add-row:focus-within { background: var(--wash); }
+.col.later .add-row:focus-within { background: var(--paper); }
+.add-row:focus-within .plus { color: var(--ink); }
+.col.past .add-row { display: none; }
+
+/* Dragging */
+.ghost { background: var(--sky) !important; }
+.ghost > * { visibility: hidden; }
+.drag-clone { background: var(--paper) !important; box-shadow: var(--shadow); opacity: 1 !important; cursor: grabbing; }
+.drag-clone .acts, .drag-clone .since { display: none; }
+body.dragging, body.dragging * { cursor: grabbing !important; }
+
+.date-picker { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+
+/* Toast */
+.toast {
+  position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translate(-50%, 12px);
+  background: var(--ink); color: var(--paper);
+  padding: 10px 16px; border-radius: 10px; font-size: 15px; font-weight: 600;
+  box-shadow: var(--shadow); opacity: 0; pointer-events: none;
+  transition: opacity .18s, transform .18s; z-index: 30; max-width: calc(100vw - 32px);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.toast { display: flex; align-items: center; gap: 14px; }
+.toast button { border: 0; background: transparent; color: inherit; font-weight: 800; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Dialogs */
+dialog {
+  width: min(480px, calc(100vw - 32px));
+  border: 0; border-radius: 14px; padding: 24px;
+  background: var(--paper); color: var(--ink); box-shadow: var(--shadow);
+}
+dialog::backdrop { background: rgba(4, 30, 66, .35); }
+dialog h2 { margin: 0 0 14px; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; }
+dialog p, dialog li { font-size: 15px; color: var(--slate); }
+dialog ol, dialog ul { padding-left: 20px; margin: 0 0 16px; }
+dialog li { margin-bottom: 8px; }
+dialog li b { color: var(--ink); font-weight: 600; }
+dialog a { color: var(--ink); font-weight: 600; }
+.field { display: block; margin-bottom: 12px; font-size: 14px; font-weight: 600; }
+.field input {
+  display: block; width: 100%; margin-top: 6px; height: 42px; padding: 0 12px;
+  border: 1.5px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink);
+  font: inherit; font-size: 15px; font-weight: 500;
+}
+.field input:focus { border-color: var(--ink); outline: none; }
+.msg { min-height: 1.4em; margin: 4px 0 14px; }
+.msg.error { color: var(--danger); }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.row .spacer { flex: 1; }
+.primary { background: var(--ink); color: var(--paper); }
+.primary:hover { background: var(--ink); opacity: .9; }
+.quiet { color: var(--slate); font-weight: 500; }
+.connected { color: var(--ink); font-weight: 600; }
+
+/* Phone: days stack vertically */
+@media (max-width: 720px) {
+  .bar { padding-left: 12px; padding-right: 12px; }
+  .board { display: block; padding: 0 16px 64px; min-height: 0; }
+  .col { margin-bottom: 14px; }
+  .head { display: flex; align-items: baseline; gap: 10px; padding: 10px 12px; }
+  .dow { font-size: 20px; }
+  .dmy { margin-top: 0; }
+  .list { min-height: 44px; padding-bottom: 6px; }
+  .col.later { padding: 0 4px 4px; }
+  .sync .label { display: none; }
+}
+@media (hover: none) {
+  .task:hover { background: transparent; }
+  .task.editing { background: var(--wash); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast { transition: none; }
+}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="nav">
+    <button class="btn icon" id="prevBtn" aria-label="Show earlier days" title="Earlier">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>
+    </button>
+    <button class="btn" id="todayBtn">Today</button>
+    <button class="btn icon" id="nextBtn" aria-label="Show later days" title="Later">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg>
+    </button>
+  </div>
+  <div class="tools">
+    <button class="btn sync" id="syncBtn" data-state="local" title="Sync settings"><span class="dot"></span><span class="label" id="syncText">Not synced</span></button>
+    <button class="btn icon" id="helpBtn" aria-label="Help" title="Help">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.5"/><path d="M7.9 7.6a2.2 2.2 0 0 1 4.2.9c0 1.5-2.1 1.9-2.1 3.2"/><circle cx="10" cy="14.3" r=".4" fill="currentColor"/></svg>
+    </button>
+    <button class="btn icon" id="settingsBtn" aria-label="Sync settings" title="Sync settings">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.6"/><path d="M10 1.8v2.4M10 15.8v2.4M18.2 10h-2.4M4.2 10H1.8M15.8 4.2l-1.7 1.7M5.9 14.1l-1.7 1.7M15.8 15.8l-1.7-1.7M5.9 5.9 4.2 4.2"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="board" id="board" aria-label="Tasks by day"></main>
+
+<input type="date" id="datePicker" class="date-picker" tabindex="-1" aria-hidden="true">
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="settings" aria-labelledby="settingsTitle">
+  <h2 id="settingsTitle">Sync across devices</h2>
+  <div id="setupSteps">
+    <ol>
+      <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a GitHub token</a>. Choose <b>Only select repositories</b> and pick <b>tasks-data</b>. Under <b>Repository permissions</b>, set <b>Contents</b> to <b>Read and write</b>.</li>
+      <li>Paste the token here and press Connect. Do this once on each device.</li>
+    </ol>
+  </div>
+  <p id="connectedNote" class="connected" hidden></p>
+  <label class="field">Token
+    <input id="tokenInput" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…">
+  </label>
+  <label class="field">Data repository
+    <input id="repoInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+  </label>
+  <p id="settingsMsg" class="msg" role="status"></p>
+  <div class="row">
+    <button class="btn quiet" id="disconnectBtn" type="button">Disconnect this device</button>
+    <button class="btn quiet" id="exportBtn" type="button">Download a copy</button>
+    <span class="spacer"></span>
+    <button class="btn" id="closeSettings" type="button">Close</button>
+    <button class="btn primary" id="connectBtn" type="button">Connect</button>
+  </div>
+</dialog>
+
+<dialog id="help" aria-labelledby="helpTitle">
+  <h2 id="helpTitle">How it works</h2>
+  <ul>
+    <li>Type a task and press <b>Enter</b>. Keep typing to add the next one.</li>
+    <li>Drag a task to another day or to <b>Later</b>. On a phone, press and hold first.</li>
+    <li>Anything not done moves to today by itself, with a note of when it was first due.</li>
+    <li>Click a task to edit it. Clear the text to delete it.</li>
+    <li>The calendar button moves a task to any date.</li>
+    <li>Press <b>N</b> to start a new task for today.</li>
+  </ul>
+  <div class="row"><span class="spacer"></span><button class="btn primary" id="closeHelp" type="button">Got it</button></div>
+</dialog>
+
+<script src="sortable.min.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const DEFAULT_REPO = 'stephengray89-source/tasks-data';
+  const FILE_PATH = 'tasks.json';
+  const API = 'https://api.github.com';
+  const PRUNE_DAYS = 60;           // done tasks older than this leave tasks.json (git history keeps them)
+  const POLL_MS = 45000;
+  const KEY = { tasks: 'taskboard:tasks', dirty: 'taskboard:dirty', cfg: 'taskboard:config', sha: 'taskboard:sha' };
+
+  const $ = (s) => document.querySelector(s);
+  const board = $('#board');
+  const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  /* ---------- storage ---------- */
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} }
+  };
+
+  /* ---------- dates (device local time) ---------- */
+  const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const parseYmd = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
+  const daysBetween = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 86400000);
+  const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+  let today = ymd(new Date());
+
+  function shortDate(s) {
+    const d = parseYmd(s);
+    const yr = d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : '';
+    return `${d.getDate()} ${MONTHS[d.getMonth()]}${yr}`;
+  }
+  function sinceLabel(date) {
+    const n = daysBetween(date, today);
+    if (n === 1) return 'since yesterday';
+    if (n < 7) return `since ${DAY_SHORT[parseYmd(date).getDay()]}`;
+    return `since ${shortDate(date)}`;
+  }
+
+  /* ---------- state ---------- */
+  let tasks = new Map();     // id -> task
+  let dirty = new Map();     // id -> change counter, for ids changed here and not yet saved to GitHub
+  let seq = 0;
+  let sha = store.get(KEY.sha, null);
+  let cfg = store.get(KEY.cfg, null);   // { token, repo }
+  let offset = 0;            // days from today for the first visible column
+  let editingId = null;
+  let renderQueued = false;
+  let lastDragEnd = 0;
+
+  function normalize(t) {
+    if (!t || typeof t.id !== 'string' || !t.id || typeof t.text !== 'string') return null;
+    const created = typeof t.createdAt === 'string' ? t.createdAt : new Date(0).toISOString();
+    const out = {
+      id: t.id,
+      text: t.text,
+      date: isDate(t.date) ? t.date : null,
+      done: !!t.done,
+      order: Number.isFinite(t.order) ? t.order : (Date.parse(created) || 0),
+      createdAt: created,
+      updatedAt: typeof t.updatedAt === 'string' ? t.updatedAt : created
+    };
+    if (isDate(t.doneAt)) out.doneAt = t.doneAt;
+    return out;
+  }
+
+  function loadLocal() {
+    tasks = new Map(store.get(KEY.tasks, []).map(normalize).filter(Boolean).map((t) => [t.id, t]));
+    dirty = new Map(store.get(KEY.dirty, []).map((id) => [id, ++seq]));
+  }
+  function saveLocal() {
+    store.set(KEY.tasks, [...tasks.values()]);
+    store.set(KEY.dirty, [...dirty.keys()]);
+    store.set(KEY.sha, sha);
+  }
+
+  /* Unfinished tasks from past days show today. Done tasks stay where they were done. */
+  function shownOn(t) {
+    if (!t.done && t.date && t.date < today) return today;
+    return t.date;
+  }
+  const byOrder = (a, b) => (a.order - b.order) || a.createdAt.localeCompare(b.createdAt);
+  function tasksFor(date) {
+    const out = [];
+    for (const t of tasks.values()) if (shownOn(t) === date) out.push(t);
+    return out.sort(byOrder);
+  }
+
+  function newId() {
+    const a = new Uint8Array(6); crypto.getRandomValues(a);
+    return Array.from(a, (b) => (b % 36).toString(36)).join('') + Date.now().toString(36).slice(-4);
+  }
+
+  /* ---------- changes ---------- */
+  function commit(t) {
+    t.updatedAt = new Date().toISOString();
+    tasks.set(t.id, t);
+    dirty.set(t.id, ++seq);
+    changed();
+  }
+  function remove(id) {
+    tasks.delete(id);
+    dirty.set(id, ++seq);
+    changed();
+  }
+  function changed() { saveLocal(); render(); queueSync(600); }
+
+  function addTask(text, date) {
+    text = text.replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    const list = tasksFor(date);
+    const last = list[list.length - 1];
+    const now = new Date();
+    commit({
+      id: newId(), text, date, done: false,
+      order: Math.max(now.getTime(), last ? last.order + 1 : 0),
+      createdAt: now.toISOString(), updatedAt: now.toISOString()
+    });
+  }
+
+  function toggleDone(t) {
+    if (t.done) { t.done = false; delete t.doneAt; }
+    else {
+      t.done = true; t.doneAt = today;
+      if (!t.date || t.date < today) t.date = today;
+    }
+    commit(t);
+  }
+
+  function moveTo(t, date, silent) {
+    const list = tasksFor(date).filter((x) => x.id !== t.id);
+    t.date = date;
+    t.order = list.length ? list[list.length - 1].order + 1000 : Date.now();
+    commit(t);
+    if (!silent) toast(date ? `Moved to ${DAY_SHORT[parseYmd(date).getDay()]} ${shortDate(date)}` : 'Moved to Later');
+  }
+
+  /* ---------- rendering ---------- */
+  const ICON = {
+    tick: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.3 5 8.6l4.5-5"/></svg>',
+    cal: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>',
+    del: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m4 4 8 8M12 4l-8 8"/></svg>'
+  };
+
+  const isPhone = () => matchMedia('(max-width: 720px)').matches;
+
+  function visibleDays() {
+    let n = 7;
+    if (!isPhone()) {
+      const w = window.innerWidth - 48;
+      n = Math.max(1, Math.min(7, Math.floor(w / 228) - 1));
+    }
+    const start = addDays(today, offset);
+    return Array.from({ length: n }, (_, i) => addDays(start, i));
+  }
+
+  let viewKey = '';
+  let sortables = [];
+
+  /* Don't rebuild rows while a finger or mouse button is down, or the click would be lost */
+  let pointerDown = false;
+  window.addEventListener('pointerdown', () => { pointerDown = true; }, true);
+  const pointerUp = () => { pointerDown = false; if (renderQueued) setTimeout(render, 0); };
+  window.addEventListener('pointerup', pointerUp, true);
+  window.addEventListener('pointercancel', pointerUp, true);
+
+  function render() {
+    if (editingId || pointerDown || document.body.classList.contains('dragging')) { renderQueued = true; return; }
+    renderQueued = false;
+    const days = visibleDays();
+    const key = days.join(',') + '|' + today;
+    if (key !== viewKey) buildColumns(days, key);
+    board.querySelectorAll('.list').forEach(fillList);
+    $('#todayBtn').setAttribute('aria-pressed', String(offset === 0));
+  }
+
+  function buildColumns(days, key) {
+    const active = document.activeElement;
+    const keep = active && active.classList.contains('add') ? { date: active.closest('.list').dataset.date, value: active.value } : null;
+
+    sortables.forEach((s) => s.destroy());
+    sortables = [];
+    board.textContent = '';
+    board.style.setProperty('--cols', days.length + 1);
+
+    for (const d of [...days, null]) board.appendChild(columnEl(d));
+    viewKey = key;
+
+    if (keep) {
+      const input = board.querySelector(`.list[data-date="${keep.date}"] .add`);
+      if (input) { input.value = keep.value; input.focus(); }
+    }
+  }
+
+  function columnEl(date) {
+    const col = document.createElement('section');
+    col.className = 'col';
+    const head = document.createElement('div');
+    head.className = 'head';
+    const dow = document.createElement('div');
+    dow.className = 'dow';
+    const dmy = document.createElement('div');
+    dmy.className = 'dmy';
+    if (date) {
+      const d = parseYmd(date);
+      dow.textContent = DAY_NAMES[d.getDay()];
+      dmy.textContent = date === today ? `Today, ${shortDate(date)}` : date === addDays(today, 1) ? `Tomorrow, ${shortDate(date)}` : shortDate(date);
+      if (date === today) col.classList.add('today');
+      if (date < today) col.classList.add('past');
+    } else {
+      col.classList.add('later');
+      dow.textContent = 'Later';
+      dmy.textContent = 'No date';
+    }
+    head.append(dow, dmy);
+    col.setAttribute('aria-label', date ? `${dow.textContent} ${shortDate(date)}` : 'Later');
+
+    const list = document.createElement('div');
+    list.className = 'list';
+    list.dataset.date = date || '';
+    const add = document.createElement('div');
+    add.className = 'add-row';
+    add.innerHTML = '<span class="plus" aria-hidden="true">+</span><input class="add" type="text" autocomplete="off" autocapitalize="sentences" placeholder="Add a task">';
+    add.querySelector('input').setAttribute('aria-label', `Add a task to ${date ? dow.textContent : 'Later'}`);
+    list.appendChild(add);
+    col.append(head, list);
+
+    sortables.push(new Sortable(list, {
+      group: { name: 'tasks', pull: true, put: !(date && date < today) },
+      draggable: '.task',
+      filter: '.editing',
+      preventOnFilter: false,
+      animation: 140,
+      forceFallback: true,
+      fallbackOnBody: true,
+      fallbackTolerance: 4,
+      fallbackClass: 'drag-clone',
+      ghostClass: 'ghost',
+      delay: 180,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 6,
+      emptyInsertThreshold: 24,
+      scroll: true,
+      scrollSensitivity: 90,
+      scrollSpeed: 16,
+      bubbleScroll: true,
+      onStart: () => document.body.classList.add('dragging'),
+      onEnd: onDrop
+    }));
+    return col;
+  }
+
+  function fillList(list) {
+    const date = list.dataset.date || null;
+    list.querySelectorAll('.task').forEach((n) => n.remove());
+    const frag = document.createDocumentFragment();
+    for (const t of tasksFor(date)) frag.appendChild(taskEl(t));
+    list.appendChild(frag);
+  }
+
+  function taskEl(t) {
+    const row = document.createElement('div');
+    row.className = 'task' + (t.done ? ' done' : '');
+    row.dataset.id = t.id;
+    const check = document.createElement('button');
+    check.className = 'check';
+    check.type = 'button';
+    check.setAttribute('aria-label', t.done ? 'Mark as not done' : 'Mark as done');
+    check.innerHTML = ICON.tick;
+    const text = document.createElement('div');
+    text.className = 'text';
+    text.textContent = t.text;
+    row.append(check, text);
+    if (!t.done && t.date && t.date < today) {
+      const since = document.createElement('span');
+      since.className = 'since';
+      since.textContent = sinceLabel(t.date);
+      row.appendChild(since);
+    }
+    const acts = document.createElement('div');
+    acts.className = 'acts';
+    acts.innerHTML = `<button class="act" type="button" data-act="date" aria-label="Move to a date" title="Move to a date">${ICON.cal}</button><button class="act" type="button" data-act="delete" aria-label="Delete" title="Delete">${ICON.del}</button>`;
+    row.appendChild(acts);
+    return row;
+  }
+
+  function onDrop(evt) {
+    document.body.classList.remove('dragging');
+    pointerDown = false;
+    lastDragEnd = Date.now();
+    const t = tasks.get(evt.item.dataset.id);
+    if (!t || (evt.from === evt.to && evt.oldDraggableIndex === evt.newDraggableIndex)) { render(); return; }
+    const toDate = evt.to.dataset.date || null;
+    const rows = [...evt.to.querySelectorAll('.task')];
+    const i = rows.indexOf(evt.item);
+    const prev = i > 0 ? tasks.get(rows[i - 1].dataset.id) : null;
+    const next = i < rows.length - 1 ? tasks.get(rows[i + 1].dataset.id) : null;
+    if (prev && next) t.order = (prev.order + next.order) / 2;
+    else if (prev) t.order = prev.order + 1000;
+    else if (next) t.order = next.order - 1000;
+    else t.order = Date.now();
+    // Reordering inside the same day keeps the original due date (so "since" notes survive)
+    if (toDate !== shownOn(t)) t.date = toDate;
+    commit(t);
+  }
+
+  /* ---------- editing ---------- */
+  function startEdit(row) {
+    const t = tasks.get(row.dataset.id);
+    if (!t || editingId) return;
+    editingId = t.id;
+    row.classList.add('editing');
+    const el = row.querySelector('.text');
+    try { el.contentEditable = 'plaintext-only'; } catch { el.contentEditable = 'true'; }
+    if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true';
+    el.setAttribute('enterkeyhint', 'done');
+    el.focus();
+    const r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+
+    let finished = false;
+    const finish = (save) => {
+      if (finished) return;
+      finished = true;
+      el.removeEventListener('keydown', onKey);
+      el.removeEventListener('blur', onBlur);
+      el.contentEditable = 'false';
+      row.classList.remove('editing');
+      row._finish = null;
+      editingId = null;
+      const value = el.textContent.replace(/\s+/g, ' ').trim();
+      const cur = tasks.get(t.id);
+      if (save && cur && !value) { deleteWithUndo(cur); return; }
+      if (save && cur && value !== cur.text) { cur.text = value; commit(cur); return; }
+      if (cur) el.textContent = cur.text;
+      render();
+    };
+    const onKey = (e) => {
+      if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); finish(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    };
+    const onBlur = () => finish(true);
+    el.addEventListener('keydown', onKey);
+    el.addEventListener('blur', onBlur);
+    row._finish = finish;
+  }
+
+  function pickDate(t, r) {
+    const p = $('#datePicker');
+    p.style.left = `${Math.min(r.left, window.innerWidth - 20)}px`;
+    p.style.top = `${r.bottom}px`;
+    p.value = shownOn(t) || today;
+    p.min = today;
+    p.onchange = () => { if (isDate(p.value)) { const cur = tasks.get(t.id); if (cur) moveTo(cur, p.value); } };
+    try { p.showPicker(); } catch { p.focus(); p.click(); }
+  }
+
+  /* Keep focus in the text while pressing the row's buttons */
+  board.addEventListener('mousedown', (e) => { if (e.target.closest('.act')) e.preventDefault(); });
+
+  board.addEventListener('click', (e) => {
+    if (Date.now() - lastDragEnd < 250) return;
+    const row = e.target.closest('.task');
+    if (!row) return;
+    const t = tasks.get(row.dataset.id);
+    if (!t) return;
+    const act = e.target.closest('.act');
+    if (act) {
+      const rect = act.getBoundingClientRect();
+      if (row._finish) row._finish(true);
+      const cur = tasks.get(t.id);
+      if (!cur) return;
+      if (act.dataset.act === 'delete') deleteWithUndo(cur);
+      else pickDate(cur, rect);
+      return;
+    }
+    if (e.target.closest('.check')) { if (row._finish) row._finish(true); const cur = tasks.get(t.id); if (cur) toggleDone(cur); return; }
+    if (!row.classList.contains('editing')) startEdit(row);
+  });
+
+  board.addEventListener('keydown', (e) => {
+    const input = e.target.closest('.add');
+    if (!input) return;
+    if (e.key === 'Enter' && !e.isComposing) {
+      e.preventDefault();
+      addTask(input.value, input.closest('.list').dataset.date || null);
+      input.value = '';
+    } else if (e.key === 'Escape') { input.value = ''; input.blur(); }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable || document.querySelector('dialog[open]')) return;
+    if (e.key === 'n' || e.key === 'N') {
+      e.preventDefault();
+      if (!visibleDays().includes(today)) { offset = 0; render(); }
+      focusToday();
+    }
+  });
+
+  function focusToday() {
+    const input = board.querySelector(`.list[data-date="${today}"] .add`);
+    if (input) input.focus();
+  }
+
+  $('#prevBtn').onclick = () => { offset -= 1; render(); };
+  $('#nextBtn').onclick = () => { offset += 1; render(); };
+  $('#todayBtn').onclick = () => { offset = 0; render(); };
+
+  let resizeTimer;
+  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 120); });
+
+  /* ---------- toast ---------- */
+  let toastTimer;
+  function toast(msg, actionLabel, action) {
+    const el = $('#toast');
+    el.textContent = '';
+    const span = document.createElement('span');
+    span.textContent = msg;
+    el.appendChild(span);
+    if (actionLabel) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = actionLabel;
+      b.onclick = () => { el.classList.remove('show'); action(); };
+      el.appendChild(b);
+    }
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), actionLabel ? 5000 : 2200);
+  }
+
+  function deleteWithUndo(t) {
+    const copy = { ...t };
+    remove(t.id);
+    toast('Deleted', 'Undo', () => commit({ ...copy }));
+  }
+
+  /* ---------- GitHub sync ---------- */
+  const fileUrl = () => `${API}/repos/${cfg.repo}/contents/${FILE_PATH}`;
+  const authHeaders = () => ({
+    Authorization: `Bearer ${cfg.token}`,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  });
+
+  function b64encode(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+  function b64decode(b64) {
+    const bin = atob((b64 || '').replace(/\s/g, ''));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  function serialize() {
+    const cutoff = addDays(today, -PRUNE_DAYS);
+    const list = [...tasks.values()].filter((t) => !(t.done && (t.doneAt || t.date || today) < cutoff));
+    list.sort((a, b) => (a.date || '9999-12-31').localeCompare(b.date || '9999-12-31') || byOrder(a, b));
+    const clean = list.map((t) => {
+      const o = { id: t.id, text: t.text, date: t.date, done: t.done, order: t.order, createdAt: t.createdAt, updatedAt: t.updatedAt };
+      if (t.doneAt) o.doneAt = t.doneAt;
+      return o;
+    });
+    return JSON.stringify({ version: 1, tasks: clean }, null, 2) + '\n';
+  }
+
+  class SyncError extends Error { constructor(kind, msg) { super(msg); this.kind = kind; } }
+
+  async function api(url, opts = {}) {
+    let r;
+    try { r = await fetch(url, { cache: 'no-store', ...opts, headers: { ...authHeaders(), ...(opts.headers || {}) } }); }
+    catch { throw new SyncError('offline', 'Offline'); }
+    if (r.status === 401) throw new SyncError('auth', 'GitHub rejected the token. It may have expired. Paste a new one.');
+    if (r.status === 403 || r.status === 429) {
+      const body = await r.json().catch(() => ({}));
+      if (/rate limit/i.test(body.message || '')) throw new SyncError('later', 'GitHub is busy. Trying again shortly.');
+      throw new SyncError('auth', 'This token can’t write to the data repository. Set Contents to Read and write.');
+    }
+    return r;
+  }
+
+  async function fetchRemote() {
+    const r = await api(fileUrl());
+    if (r.status === 404) {
+      const repo = await api(`${API}/repos/${cfg.repo}`);
+      if (repo.status === 404) throw new SyncError('auth', `Can’t see ${cfg.repo} with this token. Check the repository name and that the token includes it.`);
+      return { missing: true };
+    }
+    if (!r.ok) throw new SyncError('later', `GitHub returned ${r.status}`);
+    const j = await r.json();
+    const text = b64decode(j.content);
+    let data;
+    try { data = text.trim() ? JSON.parse(text) : { tasks: [] }; }
+    catch { throw new SyncError('data', 'tasks.json in the data repository isn’t valid JSON, so nothing was overwritten.'); }
+    return { sha: j.sha, tasks: (Array.isArray(data.tasks) ? data.tasks : []).map(normalize).filter(Boolean) };
+  }
+
+  async function putRemote() {
+    const body = { message: 'Update tasks (web)', content: b64encode(serialize()) };
+    if (sha) body.sha = sha;
+    const r = await api(fileUrl(), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (r.status === 409 || r.status === 422) return { conflict: true };
+    if (!r.ok) throw new SyncError('later', `GitHub returned ${r.status}`);
+    const j = await r.json();
+    return { sha: j.content.sha };
+  }
+
+  /* Remote wins, except for tasks changed on this device since the last save */
+  function merge(remoteTasks) {
+    const merged = new Map(remoteTasks.map((t) => [t.id, t]));
+    for (const id of dirty.keys()) {
+      const local = tasks.get(id), remote = merged.get(id);
+      if (!local) merged.delete(id);
+      else if (!remote || Date.parse(local.updatedAt) >= Date.parse(remote.updatedAt)) merged.set(id, local);
+    }
+    tasks = merged;
+  }
+
+  let chain = Promise.resolve();
+  let syncTimer = null;
+  let lastSync = 0;
+
+  function queueSync(ms) {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => sync(), ms);
+  }
+  function sync() {
+    chain = chain.then(runSync, runSync);
+    return chain;
+  }
+
+  async function runSync() {
+    clearTimeout(syncTimer);
+    if (!cfg) { setStatus('local'); return; }
+    lastSync = Date.now();
+    setStatus('busy');
+    try {
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const remote = await fetchRemote();
+        if (remote.missing) { sha = null; for (const id of tasks.keys()) dirty.set(id, ++seq); }
+        else { sha = remote.sha; merge(remote.tasks); }
+        saveLocal();
+        render();
+        if (!dirty.size) { setStatus('ok'); return; }
+        const snapshot = new Map(dirty);
+        const res = await putRemote();
+        if (res.conflict) continue;
+        sha = res.sha;
+        for (const [id, n] of snapshot) if (dirty.get(id) === n) dirty.delete(id);
+        saveLocal();
+        if (!dirty.size) { setStatus('ok'); return; }
+      }
+      setStatus('busy');
+      queueSync(3000);
+    } catch (e) {
+      const kind = e instanceof SyncError ? e.kind : 'later';
+      if (kind === 'offline') { setStatus('offline'); queueSync(30000); }
+      else if (kind === 'later') { setStatus('error', e.message); queueSync(30000); }
+      else setStatus('error', e.message);
+    }
+  }
+
+  let statusMsg = '';
+  function setStatus(state, msg) {
+    const btn = $('#syncBtn');
+    const label = { local: 'Not synced', busy: dirty.size ? 'Saving…' : 'Syncing…', ok: 'Synced', offline: 'Offline', error: 'Sync problem' }[state];
+    btn.dataset.state = state;
+    $('#syncText').textContent = label;
+    statusMsg = msg || '';
+    btn.title = state === 'ok' && cfg ? `Synced with ${cfg.repo}` : state === 'offline' ? 'Offline. Changes are kept on this device and sent when you’re back online.' : (msg || label);
+  }
+
+  setInterval(() => {
+    if (cfg && document.visibilityState === 'visible' && !dirty.size) sync();
+  }, POLL_MS);
+  const wake = () => { if (cfg && document.visibilityState === 'visible' && Date.now() - lastSync > 5000) sync(); };
+  document.addEventListener('visibilitychange', wake);
+  window.addEventListener('focus', wake);
+  window.addEventListener('online', () => cfg && sync());
+
+  /* New day: unfinished tasks roll forward to today */
+  setInterval(() => {
+    const now = ymd(new Date());
+    if (now !== today) { today = now; viewKey = ''; render(); }
+  }, 30000);
+
+  /* ---------- settings ---------- */
+  const settings = $('#settings');
+  function openSettings() {
+    $('#repoInput').value = cfg ? cfg.repo : DEFAULT_REPO;
+    $('#tokenInput').value = '';
+    $('#tokenInput').placeholder = cfg ? 'Saved on this device' : 'github_pat_…';
+    $('#setupSteps').hidden = !!cfg;
+    $('#connectedNote').hidden = !cfg;
+    $('#connectedNote').textContent = cfg ? `This device syncs with ${cfg.repo}.` : '';
+    $('#disconnectBtn').hidden = !cfg;
+    $('#connectBtn').textContent = cfg ? 'Update' : 'Connect';
+    const m = $('#settingsMsg');
+    m.textContent = statusMsg; m.className = 'msg' + (statusMsg ? ' error' : '');
+    settings.showModal();
+    if (!cfg) $('#tokenInput').focus();
+  }
+  $('#syncBtn').onclick = openSettings;
+  $('#settingsBtn').onclick = openSettings;
+  $('#closeSettings').onclick = () => settings.close();
+  $('#helpBtn').onclick = () => $('#help').showModal();
+  $('#closeHelp').onclick = () => $('#help').close();
+  [settings, $('#help')].forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
+
+  $('#connectBtn').onclick = async () => {
+    const m = $('#settingsMsg');
+    const token = $('#tokenInput').value.trim() || (cfg && cfg.token);
+    const repo = $('#repoInput').value.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '') || DEFAULT_REPO;
+    if (!token) { m.textContent = 'Paste a token first.'; m.className = 'msg error'; return; }
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { m.textContent = 'Use the form owner/name, for example ' + DEFAULT_REPO + '.'; m.className = 'msg error'; return; }
+    m.textContent = 'Checking…'; m.className = 'msg';
+    const firstTime = !cfg || cfg.repo !== repo;
+    const prev = cfg;
+    cfg = { token, repo };
+    try {
+      const r = await api(`${API}/repos/${repo}`);
+      if (r.status === 404) throw new SyncError('auth', `Can’t see ${repo} with this token. Check the token includes that repository.`);
+      if (!r.ok) throw new SyncError('later', `GitHub returned ${r.status}`);
+      const info = await r.json();
+      if (info.permissions && !info.permissions.push) throw new SyncError('auth', 'This token can only read. Set Contents to Read and write.');
+    } catch (e) {
+      cfg = prev;
+      m.textContent = e.message || 'Couldn’t reach GitHub.'; m.className = 'msg error';
+      return;
+    }
+    if (firstTime) { sha = null; for (const id of tasks.keys()) dirty.set(id, ++seq); }
+    store.set(KEY.cfg, cfg);
+    saveLocal();
+    settings.close();
+    toast('Connected');
+    sync();
+  };
+
+  $('#disconnectBtn').onclick = () => {
+    cfg = null; sha = null;
+    store.del(KEY.cfg); store.del(KEY.sha);
+    setStatus('local');
+    settings.close();
+    toast('This device no longer syncs. Your tasks stay here.');
+  };
+
+  $('#exportBtn').onclick = () => {
+    const blob = new Blob([serialize()], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `tasks-${today}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  /* Finish deferred renders after an edit or drag */
+  setInterval(() => { if (renderQueued) render(); }, 400);
+
+  /* ---------- start ---------- */
+  loadLocal();
+  render();
+  if (cfg) sync(); else setStatus('local');
+  if (matchMedia('(hover: hover) and (pointer: fine)').matches) focusToday();
+})();
+</script>
+</body>
+</html>
