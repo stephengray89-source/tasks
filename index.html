@@ -331,6 +331,14 @@ dialog a { color: var(--ink); font-weight: 700; }
 .primary:hover { background: var(--ink); opacity: .9; }
 .quiet { color: var(--slate); font-weight: 500; }
 .connected { color: var(--ink); font-weight: 600; }
+dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
+.badge-sec { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.badge-sec .msg { margin: 0 0 10px; }
+#badgeSetup ol { margin: 0 0 10px; }
+#badgeSetup .copy { height: 32px; padding: 0 10px; margin: -6px 0 0 -10px; color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.key-field { display: block; width: 100%; margin-top: 6px; height: 36px; padding: 0 8px; border: 1.5px solid var(--line); border-radius: 8px; font: 13px ui-monospace, monospace; color: var(--ink); background: var(--wash); }
+.close-row { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.btn:disabled { opacity: .45; cursor: default; }
 
 /* Phone */
 @media (max-width: 760px) {
@@ -405,7 +413,8 @@ dialog a { color: var(--ink); font-weight: 700; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <dialog id="settings" aria-labelledby="settingsTitle">
-  <h2 id="settingsTitle">Sync across devices</h2>
+  <h2 id="settingsTitle">Settings</h2>
+  <h3>Sync across devices</h3>
   <div id="setupSteps">
     <ol>
       <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a GitHub token</a>. Choose <b>Only select repositories</b> and pick <b>tasks-data</b>. Under <b>Repository permissions</b>, set <b>Contents</b> to <b>Read and write</b>.</li>
@@ -424,9 +433,22 @@ dialog a { color: var(--ink); font-weight: 700; }
     <button class="btn quiet" id="disconnectBtn" type="button">Disconnect this device</button>
     <button class="btn quiet" id="exportBtn" type="button">Download a copy</button>
     <span class="spacer"></span>
-    <button class="btn" id="closeSettings" type="button">Close</button>
     <button class="btn primary" id="connectBtn" type="button">Connect</button>
   </div>
+  <div class="badge-sec">
+    <h3>Badge on the app icon</h3>
+    <p class="msg" id="badgeMsg"></p>
+    <div id="badgeSetup" hidden>
+      <ol>
+        <li><button class="btn quiet copy" id="copyKeyBtn" type="button">Copy your key</button><input id="keyField" class="key-field" readonly hidden aria-label="Your key"></li>
+        <li><a id="secretLink" href="#" target="_blank" rel="noopener">Open GitHub</a>. Name the secret <b>PUSH_KEY</b>, paste the key, press <b>Add secret</b>.</li>
+        <li>Come back here and press Done.</li>
+      </ol>
+      <div class="row"><span class="spacer"></span><button class="btn primary" id="keyDoneBtn" type="button">Done</button></div>
+    </div>
+    <div class="row"><span class="spacer"></span><button class="btn primary" id="badgeBtn" type="button">Turn on</button></div>
+  </div>
+  <div class="row close-row"><span class="spacer"></span><button class="btn" id="closeSettings" type="button">Close</button></div>
 </dialog>
 
 <dialog id="help" aria-labelledby="helpTitle">
@@ -440,6 +462,7 @@ dialog a { color: var(--ink); font-weight: 700; }
     <li>Drag a task to reorder it or move it to another day. Day buttons appear at the bottom while you drag. On a phone, press and hold first.</li>
     <li>Anything not done moves to today by itself. After three days it's marked overdue.</li>
     <li>Click a task to edit it. Clear the text to delete it.</li>
+    <li>The app icon on your phone can show how many tasks are overdue. Turn it on in Settings, from the Home Screen app.</li>
   </ul>
   <div class="row"><span class="spacer"></span><button class="btn primary" id="closeHelp" type="button">Got it</button></div>
 </dialog>
@@ -746,6 +769,7 @@ dialog a { color: var(--ink); font-weight: 700; }
     const keys = [...groups.keys()].sort((a, b) => (a === null) - (b === null) || String(a).localeCompare(String(b)));
     for (const k of keys) upcoming.appendChild(groupEl(k, groups.get(k).sort(openFirst)));
     if (entryDate !== undefined && entryDate !== null && entryDate <= today) { entryDate = undefined; updateWhen(); }
+    updateBadge();
   }
 
   function groupEl(date, items) {
@@ -1425,6 +1449,7 @@ dialog a { color: var(--ink); font-weight: 700; }
     const m = $('#settingsMsg');
     m.textContent = statusMsg; m.className = 'msg' + (statusMsg ? ' error' : '');
     settings.showModal();
+    refreshBadgeUI();
     if (!cfg) $('#tokenInput').focus();
   }
   $('#syncBtn').onclick = openSettings;
@@ -1468,6 +1493,180 @@ dialog a { color: var(--ink); font-weight: 700; }
     setStatus('local');
     settings.close();
     toast('This device no longer syncs. Your tasks stay here.');
+  };
+
+  /* ---------- badge on the app icon ----------
+     The app sets the overdue count whenever it runs. A morning job in tasks-data
+     (push/send.js) sends a push so the count updates while the app is closed.
+     The first device to turn it on creates the signing key. The private half is shown once,
+     to be saved as the PUSH_KEY secret in GitHub; it is not stored in the repo. */
+  const KEY_PENDING = 'taskboard:pushKeyPending';
+  const pushUrl = () => `${API}/repos/${cfg.repo}/contents/push.json`;
+  const isIOS = () => /iPhone|iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  const pushSupported = () => window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const pendingKey = () => store.get(KEY_PENDING, null);
+
+  function overdueCount() {
+    let n = 0;
+    for (const t of tasks.values()) if (!t.done && t.date && t.date < today) n++;
+    return n;
+  }
+  let lastBadge = -1;
+  function updateBadge() {
+    const n = overdueCount();
+    if (n === lastBadge) return;
+    lastBadge = n;
+    try {
+      if (n && navigator.setAppBadge) navigator.setAppBadge(n).catch(() => {});
+      else if (!n && navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+    } catch {}
+  }
+
+  function deviceName() {
+    const ua = navigator.userAgent;
+    if (/iPhone/.test(ua)) return 'iPhone';
+    if (isIOS()) return 'iPad';
+    if (/Android/.test(ua)) return 'Android';
+    if (/Mac/.test(ua)) return 'Mac';
+    if (/Windows/.test(ua)) return 'Windows';
+    return 'Device';
+  }
+  function keyBytes(s) {
+    const b = atob((s + '='.repeat((4 - (s.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(b, (c) => c.charCodeAt(0));
+  }
+  const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  async function newSigningKey() {
+    const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    return { pub: b64url(await crypto.subtle.exportKey('raw', kp.publicKey)), priv: (await crypto.subtle.exportKey('jwk', kp.privateKey)).d };
+  }
+
+  /* push.json in the data repo: the public signing key and the devices that get the morning push */
+  async function readPushDoc() {
+    const r = await api(pushUrl());
+    if (r.status === 404) return { doc: { subscriptions: [] }, fileSha: null };
+    if (!r.ok) throw new SyncError('later', `GitHub returned ${r.status}`);
+    const j = await r.json();
+    let doc = {};
+    try { doc = JSON.parse(b64decode(j.content)); } catch {}
+    if (!Array.isArray(doc.subscriptions)) doc.subscriptions = [];
+    return { doc, fileSha: j.sha };
+  }
+  async function editPushDoc(change, message) {
+    for (let i = 0; i < 4; i++) {
+      const { doc, fileSha } = await readPushDoc();
+      const body = { message, content: b64encode(JSON.stringify(change(doc), null, 2) + '\n') };
+      if (fileSha) body.sha = fileSha;
+      const w = await api(pushUrl(), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (w.status === 409 || w.status === 422) continue;
+      if (!w.ok) throw new SyncError('later', `GitHub returned ${w.status}`);
+      return;
+    }
+    throw new SyncError('later', 'GitHub was busy. Try again.');
+  }
+
+  async function badgeState() {
+    if (!pushSupported()) return 'unsupported';
+    if (Notification.permission === 'denied') return 'denied';
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg && reg.pushManager ? await reg.pushManager.getSubscription() : null;
+    return sub ? 'on' : 'off';
+  }
+  async function refreshBadgeUI() {
+    const msg = $('#badgeMsg'), btn = $('#badgeBtn');
+    const st = await badgeState().catch(() => 'unsupported');
+    const setupNeeded = st === 'on' && !!pendingKey();
+    $('#badgeSetup').hidden = !setupNeeded;
+    btn.hidden = setupNeeded; btn.disabled = false; msg.className = 'msg';
+    btn.dataset.state = st;
+    if (cfg) $('#secretLink').href = `https://github.com/${cfg.repo}/settings/secrets/actions/new`;
+    if (st === 'unsupported') {
+      msg.textContent = isIOS() ? 'Open Tasks from your Home Screen to turn this on.' : 'This browser can’t show a badge on an app icon.';
+      btn.hidden = true;
+    } else if (st === 'denied') {
+      msg.textContent = 'Notifications are blocked for Tasks. Allow them in your phone’s Settings, then come back here.';
+      btn.hidden = true;
+    } else if (!cfg) {
+      msg.textContent = 'Connect sync first.';
+      btn.textContent = 'Turn on'; btn.disabled = true;
+    } else if (setupNeeded) {
+      msg.textContent = 'One last step, needed once:';
+    } else if (st === 'on') {
+      msg.textContent = 'On for this device. Shows your overdue count, updated each morning at 7:25.';
+      btn.textContent = 'Turn off';
+    } else {
+      msg.textContent = 'Shows how many tasks are overdue, updated each morning at 7:25.';
+      btn.textContent = 'Turn on';
+    }
+  }
+
+  $('#badgeBtn').onclick = async () => {
+    const btn = $('#badgeBtn'), msg = $('#badgeMsg');
+    const turningOn = btn.dataset.state !== 'on';
+    btn.disabled = true;
+    try {
+      if (turningOn) {
+        const perm = await Notification.requestPermission();   // must come first: iPhone only asks from a tap
+        if (perm !== 'granted') { await refreshBadgeUI(); return; }
+        const reg = await navigator.serviceWorker.register('sw.js');
+        await navigator.serviceWorker.ready;
+        const { doc } = await readPushDoc();
+        const fresh = doc.vapidPublic ? null : await newSigningKey();
+        const pub = doc.vapidPublic || fresh.pub;
+        let sub = await reg.pushManager.getSubscription();
+        if (sub && fresh) { await sub.unsubscribe(); sub = null; }
+        if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(pub) });
+        const j = sub.toJSON();
+        if (fresh) store.set(KEY_PENDING, fresh.priv);
+        await editPushDoc((d) => ({
+          ...d,
+          vapidPublic: d.vapidPublic || pub,
+          subscriptions: d.subscriptions.filter((s) => s.endpoint !== j.endpoint)
+            .concat([{ endpoint: j.endpoint, keys: j.keys, device: deviceName(), added: new Date().toISOString() }])
+        }), fresh ? 'Turn on badge (web)' : 'Confirm badge setup (web)');
+        lastBadge = -1; updateBadge();
+        toast(fresh ? 'Nearly there' : 'Badge turned on. A test note is on its way.');
+      } else {
+        const reg = await navigator.serviceWorker.getRegistration();
+        const sub = reg && (await reg.pushManager.getSubscription());
+        if (sub) {
+          const endpoint = sub.endpoint;
+          await sub.unsubscribe();
+          await editPushDoc((d) => ({ ...d, subscriptions: d.subscriptions.filter((s) => s.endpoint !== endpoint) }), 'Turn off badge (web)');
+        }
+        if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+        lastBadge = 0;
+        toast('Badge turned off');
+      }
+    } catch (e) {
+      msg.textContent = (e && e.message) || 'Something went wrong. Try again.';
+      msg.className = 'msg error';
+      btn.disabled = false;
+      return;
+    }
+    await refreshBadgeUI();
+  };
+
+  $('#copyKeyBtn').onclick = async () => {
+    const key = pendingKey();
+    if (!key) return;
+    try { await navigator.clipboard.writeText(key); toast('Key copied'); }
+    catch { const f = $('#keyField'); f.hidden = false; f.value = key; f.focus(); f.select(); }
+  };
+  $('#keyDoneBtn').onclick = async () => {
+    const b = $('#keyDoneBtn');
+    b.disabled = true;
+    try {
+      await editPushDoc((d) => ({ ...d, confirmedAt: new Date().toISOString() }), 'Confirm badge setup (web)');
+      store.del(KEY_PENDING);
+      $('#keyField').hidden = true; $('#keyField').value = '';
+      toast('Set up. A test note should arrive in a few minutes.');
+    } catch (e) {
+      $('#badgeMsg').textContent = (e && e.message) || 'Couldn’t reach GitHub. Try again.';
+      $('#badgeMsg').className = 'msg error';
+    }
+    b.disabled = false;
+    await refreshBadgeUI();
   };
 
   $('#exportBtn').onclick = () => {
