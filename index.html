@@ -64,7 +64,7 @@ body {
 button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
 
 /* Top: the one place to add tasks */
 .top {
@@ -130,11 +130,9 @@ button { font: inherit; color: inherit; }
 .sync[data-state="error"] { color: var(--danger); }
 .sync[data-state="error"] .dot { background: var(--danger); }
 
-/* Two panes: Today (focus) and Upcoming (only days with something on) */
-.main {
-  display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: 56px; align-items: start; padding-bottom: 140px;
-}
+/* Two views, switched by the tab bar: Today, and Upcoming (only days with something on) */
+.main { display: block; padding-bottom: 150px; }
+body[data-view="today"] .up-pane, body[data-view="upcoming"] .today-pane { display: none; }
 .today-head {
   display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
   background: var(--band); color: var(--band-ink);
@@ -143,13 +141,48 @@ button { font: inherit; color: inherit; }
 .today-head h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
 .today-head .date { font-size: 15px; font-weight: 500; opacity: .75; margin-top: 3px; }
 .today-head .count { font-size: 15px; font-weight: 700; opacity: .85; white-space: nowrap; }
-.up-head { padding: 16px 4px 15px; margin-bottom: 8px; }
+.up-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  background: var(--wash); border-radius: 12px; padding: 16px 18px 15px; margin-bottom: 12px;
+}
 .up-head h2 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.up-head .date { font-size: 15px; font-weight: 500; color: var(--slate); margin-top: 3px; }
+.up-head .count { font-size: 15px; font-weight: 700; color: var(--slate); white-space: nowrap; }
 
 .list { display: flex; flex-direction: column; min-height: 8px; position: relative; }
-#todayList { min-height: 140px; padding-bottom: 24px; }
-#todayList:not(:has(.task))::before { content: "Nothing left for today."; color: var(--slate); padding: 10px 12px; font-size: 16px; }
+#todayList { min-height: 60px; padding-bottom: 24px; }
 #upcoming:not(:has(.group))::before { content: "Nothing planned yet. Add a day to a task and it shows here."; display: block; color: var(--slate); padding: 10px 12px; font-size: 16px; }
+
+/* Shown when nothing is left today */
+.caught { text-align: center; padding: 40px 16px 24px; }
+.caught svg { width: 56px; height: 56px; color: var(--ink); }
+.caught svg .cut { stroke: var(--paper); }
+.caught h2 { margin: 14px 0 4px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+.caught p { margin: 0; font-size: 15px; color: var(--slate); }
+.caught .next {
+  margin-top: 14px; height: 40px; padding: 0 16px; border: 1.5px solid var(--line); border-radius: 999px;
+  background: var(--paper); color: var(--ink); font-size: 15px; font-weight: 700; cursor: pointer;
+}
+.caught .next:hover { background: var(--wash); }
+
+/* Floating view switcher */
+.tabbar {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 30; display: flex; gap: 4px; padding: 6px;
+  width: min(340px, calc(100vw - 32px));
+  background: var(--paper); border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(4, 30, 66, .16), 0 0 0 1px var(--line);
+}
+.tab {
+  flex: 1; height: 64px; padding: 0; border: 0; border-radius: 999px; background: transparent;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  color: var(--slate); font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.tab svg { width: 28px; height: 28px; }
+.tab svg .cut { fill: var(--paper); }
+.tab[aria-current="page"] { background: var(--wash); color: var(--ink); font-weight: 800; }
+body.dragging .tabbar { display: none; }
 .group { margin-bottom: 18px; }
 .group-head { display: flex; align-items: baseline; gap: 10px; padding: 6px 12px 4px; }
 .group-head .gd { font-size: 17px; font-weight: 800; }
@@ -293,7 +326,7 @@ body.dragging .dropbar { display: flex; }
 
 /* Toast */
 .toast {
-  position: fixed; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translate(-50%, 12px);
+  position: fixed; left: 50%; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 90px); transform: translate(-50%, 12px);
   z-index: 70; display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 32px);
   padding: 11px 16px; border-radius: 11px; background: var(--ink); color: var(--paper);
   font-size: 15px; font-weight: 600; box-shadow: var(--shadow);
@@ -349,11 +382,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
   #entry { font-size: 16px; }
   .when .lbl { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sync[data-state="ok"] .label, .sync[data-state="busy"] .label { display: none; }
-  .main { display: block; padding-bottom: 160px; }
-  .today-head h1 { font-size: 24px; }
-  #todayList { min-height: 80px; }
-  .up-pane { margin-top: 18px; }
-  .up-head h2 { font-size: 24px; }
+  .today-head h1, .up-head h2 { font-size: 24px; }
   .chip { min-width: 58px; height: 46px; padding: 0 10px; font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -392,13 +421,36 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
       </div>
       <div class="count" id="todayCount"></div>
     </div>
+    <div class="caught" id="caughtUp" hidden>
+      <svg viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26" fill="currentColor"/><path class="cut" d="M17.5 28.5l7 7 14-15" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h2>You&rsquo;re all caught up</h2>
+      <p id="caughtSub"></p>
+      <button class="next" id="nextUp" type="button" hidden></button>
+    </div>
     <div class="list" id="todayList"></div>
   </section>
   <section class="up-pane" aria-labelledby="upTitle">
-    <div class="up-head"><h2 id="upTitle">Upcoming</h2></div>
+    <div class="up-head">
+      <div>
+        <h2 id="upTitle">Upcoming</h2>
+        <div class="date" id="upSub">From tomorrow</div>
+      </div>
+      <div class="count" id="upCount"></div>
+    </div>
     <div id="upcoming"></div>
   </section>
 </main>
+
+<nav class="tabbar" aria-label="Views">
+  <button class="tab" type="button" data-view="today">
+    <svg viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="4" width="22" height="21" rx="5.5" fill="currentColor"/><rect class="cut" x="7" y="7.6" width="14" height="2.2" rx="1.1"/><text class="cut" id="tabDay" x="14" y="21.6" text-anchor="middle" font-size="10.5" font-weight="800" font-family="Figtree, system-ui, sans-serif">1</text></svg>
+    <span>Today</span>
+  </button>
+  <button class="tab" type="button" data-view="upcoming">
+    <svg viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="4" width="22" height="21" rx="5.5" fill="currentColor"/><g class="cut"><rect x="7" y="7.6" width="14" height="2.2" rx="1.1"/><circle cx="9.6" cy="14.6" r="1.5"/><circle cx="14" cy="14.6" r="1.5"/><circle cx="18.4" cy="14.6" r="1.5"/><circle cx="9.6" cy="19.6" r="1.5"/><circle cx="14" cy="19.6" r="1.5"/><circle cx="18.4" cy="19.6" r="1.5"/></g></svg>
+    <span>Upcoming</span>
+  </button>
+</nav>
 
 <div class="dropbar" id="dropbar" aria-hidden="true"></div>
 
@@ -455,6 +507,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
   <h2 id="helpTitle">How it works</h2>
   <ul>
     <li>Type a task and press <b>Enter</b>. The box stays ready for the next one. Press <b>N</b> to jump to it.</li>
+    <li>Switch between <b>Today</b> and <b>Upcoming</b> with the buttons at the bottom, or <b>T</b> and <b>U</b> on a keyboard.</li>
     <li>Say or type when: <b>Thursday</b>, <b>next Thursday</b>, <b>tomorrow</b>, <b>next week</b>, <b>5 Nov</b>, <b>in 3 days</b>, <b>someday</b>. The task goes to that day.</li>
     <li>A list becomes separate tasks: <b>call Ian, send Pete the deck and book the car service</b>. Check the preview, or press <b>Shift+Enter</b> to add it exactly as typed.</li>
     <li>The calendar button in the box sets the day for everything you add until you change it.</li>
@@ -754,7 +807,8 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     const todays = tasksFor(today);
     fill(todayList, todays);
     const left = todays.filter((t) => !t.done).length;
-    $('#todayCount').textContent = left ? `${left} to do` : (todays.length ? 'All done' : '');
+    $('#todayCount').textContent = left ? `${left} to do` : '';
+    $('#tabDay').textContent = String(d.getDate());
 
     groupSortables.forEach((s) => s.destroy());
     groupSortables = [];
@@ -768,9 +822,41 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     }
     const keys = [...groups.keys()].sort((a, b) => (a === null) - (b === null) || String(a).localeCompare(String(b)));
     for (const k of keys) upcoming.appendChild(groupEl(k, groups.get(k).sort(openFirst)));
+    const upOpen = [...groups.values()].reduce((n, g) => n + g.filter((t) => !t.done).length, 0);
+    $('#upCount').textContent = upOpen ? `${upOpen} to do` : '';
+
+    // Nothing left today: say so, and point to what's next
+    const caught = $('#caughtUp');
+    caught.hidden = left > 0;
+    if (!left) {
+      const doneToday = todays.length;
+      $('#caughtSub').textContent = doneToday ? `${doneToday} done today.` : 'Nothing due today.';
+      const nextKey = keys.find((k) => k !== null && groups.get(k).some((t) => !t.done));
+      const nb = $('#nextUp');
+      nb.hidden = !nextKey;
+      if (nextKey) {
+        const n = groups.get(nextKey).filter((t) => !t.done).length;
+        const day = nextKey === addDays(today, 1) ? 'tomorrow' : daysBetween(today, nextKey) <= 6 ? DAY_NAMES[parseYmd(nextKey).getDay()] : whenLabel(nextKey);
+        nb.textContent = `Next up: ${n} task${n === 1 ? '' : 's'} ${nextKey === addDays(today, 1) ? '' : 'on '}${day}`;
+      }
+    }
+
     if (entryDate !== undefined && entryDate !== null && entryDate <= today) { entryDate = undefined; updateWhen(); }
     updateBadge();
   }
+
+  /* ---------- views ---------- */
+  let view = 'today';          // the app always opens on Today
+  function setView(v, keepScroll) {
+    view = v === 'upcoming' ? 'upcoming' : 'today';
+    document.body.dataset.view = view;
+    document.querySelectorAll('.tab').forEach((t) => {
+      if (t.dataset.view === view) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+    });
+    if (!keepScroll) window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => setView(t.dataset.view)));
+  $('#nextUp').addEventListener('click', () => setView('upcoming'));
 
   function groupEl(date, items) {
     const g = document.createElement('div');
@@ -1011,6 +1097,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     const elsewhere = items.filter((i) => i.date !== today);
     if (items.length > 1) toast(elsewhere.length ? `Added ${items.length} tasks` : `Added ${items.length} tasks to today`);
     else if (elsewhere.length) toast(`Added to ${whenLabel(items[0].date)}`);
+    else if (view === 'upcoming') toast('Added to Today');
   }
 
   entry.addEventListener('input', updatePreview);
@@ -1116,6 +1203,8 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     const tag = (e.target.tagName || '').toLowerCase();
     if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable || document.querySelector('dialog[open]') || !pop.hidden) return;
     if (e.key === 'n' || e.key === 'N' || e.key === '/') { e.preventDefault(); entry.focus(); }
+    else if (e.key === 't' || e.key === 'T') setView('today');
+    else if (e.key === 'u' || e.key === 'U') setView('upcoming');
   });
 
   /* ---------- swipe: left = done, full right = next working day, half right = pick a day ----------
@@ -1687,6 +1776,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
 
   /* ---------- start ---------- */
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
+  setView('today', true);
   loadLocal();
   render();
   if (cfg) sync(); else setStatus('local');
