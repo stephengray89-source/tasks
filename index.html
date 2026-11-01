@@ -602,7 +602,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
       </ol>
       <div class="row"><span class="spacer"></span><button class="btn primary" id="keyDoneBtn" type="button">Done</button></div>
     </div>
-    <div class="row"><span class="spacer"></span><button class="btn primary" id="badgeBtn" type="button">Turn on</button></div>
+    <div class="row"><button class="btn quiet" id="redoKeyBtn" type="button" hidden>No test note? Redo the key step</button><span class="spacer"></span><button class="btn primary" id="badgeBtn" type="button">Turn on</button></div>
   </div>
   <div class="row close-row"><button class="btn quiet" id="helpBtn" type="button">How it works</button><span class="spacer"></span><button class="btn" id="closeSettings" type="button">Close</button></div>
 </dialog>
@@ -1792,7 +1792,8 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
      (push/send.js) sends a push so the count updates while the app is closed.
      The first device to turn it on creates the signing key. The private half is shown once,
      to be saved as the PUSH_KEY secret in GitHub; it is not stored in the repo. */
-  const KEY_PENDING = 'taskboard:pushKeyPending';
+  const KEY_PENDING = 'taskboard:pushKeyPending';   // kept on this device in case the GitHub step needs redoing
+  const KEY_CONFIRMED = 'taskboard:pushKeyConfirmed';
   const pushUrl = () => `${API}/repos/${cfg.repo}/contents/push.json`;
   const isIOS = () => /iPhone|iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   const pushSupported = () => window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -1863,13 +1864,23 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     if (Notification.permission === 'denied') return 'denied';
     const reg = await navigator.serviceWorker.getRegistration();
     const sub = reg && reg.pushManager ? await reg.pushManager.getSubscription() : null;
-    return sub ? 'on' : 'off';
+    if (!sub) return 'off';
+    // Subscribed here, but GitHub has no key or doesn't list this device: it needs turning on again
+    if (cfg) {
+      try {
+        const { doc } = await readPushDoc();
+        if (!doc.vapidPublic || !doc.subscriptions.some((s) => s.endpoint === sub.endpoint)) return 'off';
+      } catch {}
+    }
+    return 'on';
   }
   async function refreshBadgeUI() {
     const msg = $('#badgeMsg'), btn = $('#badgeBtn');
     const st = await badgeState().catch(() => 'unsupported');
-    const setupNeeded = st === 'on' && !!pendingKey();
+    const confirmed = !!store.get(KEY_CONFIRMED, false);
+    const setupNeeded = st === 'on' && !!pendingKey() && !confirmed;
     $('#badgeSetup').hidden = !setupNeeded;
+    $('#redoKeyBtn').hidden = !(st === 'on' && pendingKey() && confirmed);
     btn.hidden = setupNeeded; btn.disabled = false; msg.className = 'msg';
     btn.dataset.state = st;
     if (cfg) $('#secretLink').href = `https://github.com/${cfg.repo}/settings/secrets/actions/new`;
@@ -1910,13 +1921,18 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
         if (sub && fresh) { await sub.unsubscribe(); sub = null; }
         if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(pub) });
         const j = sub.toJSON();
-        if (fresh) store.set(KEY_PENDING, fresh.priv);
-        await editPushDoc((d) => ({
-          ...d,
-          vapidPublic: d.vapidPublic || pub,
-          subscriptions: d.subscriptions.filter((s) => s.endpoint !== j.endpoint)
-            .concat([{ endpoint: j.endpoint, keys: j.keys, device: deviceName(), added: new Date().toISOString() }])
-        }), fresh ? 'Turn on badge (web)' : 'Confirm badge setup (web)');
+        if (fresh) { store.set(KEY_PENDING, fresh.priv); store.del(KEY_CONFIRMED); }
+        await editPushDoc((d) => {
+          // A new key makes every older subscription useless, so it starts the list again
+          const others = fresh ? [] : d.subscriptions.filter((s) => s.endpoint !== j.endpoint);
+          const out = {
+            ...d,
+            vapidPublic: fresh ? pub : (d.vapidPublic || pub),
+            subscriptions: others.concat([{ endpoint: j.endpoint, keys: j.keys, device: deviceName(), added: new Date().toISOString() }])
+          };
+          if (fresh) delete out.confirmedAt;
+          return out;
+        }, fresh ? 'Turn on badge (web)' : 'Confirm badge setup (web)');
         lastBadge = -1; updateBadge();
         toast(fresh ? 'Nearly there' : 'Badge turned on. A test note is on its way.');
       } else {
@@ -1951,9 +1967,9 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     b.disabled = true;
     try {
       await editPushDoc((d) => ({ ...d, confirmedAt: new Date().toISOString() }), 'Confirm badge setup (web)');
-      store.del(KEY_PENDING);
+      store.set(KEY_CONFIRMED, true);
       $('#keyField').hidden = true; $('#keyField').value = '';
-      toast('Set up. A test note should arrive in a few minutes.');
+      toast('A test note should arrive in a few minutes.');
     } catch (e) {
       $('#badgeMsg').textContent = (e && e.message) || 'Couldn’t reach GitHub. Try again.';
       $('#badgeMsg').className = 'msg error';
@@ -1961,6 +1977,8 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     b.disabled = false;
     await refreshBadgeUI();
   };
+
+  $('#redoKeyBtn').onclick = () => { store.del(KEY_CONFIRMED); refreshBadgeUI(); };
 
   $('#exportBtn').onclick = () => {
     const blob = new Blob([serialize()], { type: 'application/json' });
