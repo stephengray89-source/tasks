@@ -457,6 +457,39 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
 .close-row { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 .btn:disabled { opacity: .45; cursor: default; }
 
+/* Desktop week board: today in focus, the next working days to the right in light grey */
+.board { display: none; }
+body.wide .wrap { max-width: 1400px; }
+body.wide .fab { right: max(20px, calc((100vw - 1400px) / 2 + 24px)); }
+body.wide .up-pane { max-width: 760px; margin: 0 auto; }
+body.wide #caughtUp { display: none !important; }
+body.wide .board {
+  display: grid; gap: 18px; align-items: start; margin-top: 4px;
+  grid-template-columns: minmax(0, 1.35fr) repeat(var(--cols, 4), minmax(0, 1fr));
+}
+.col { min-width: 0; }
+.col-head {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 8px 12px 9px; margin-bottom: 4px; border-bottom: 2px solid var(--line);
+}
+.col-head .cd { font-size: 16px; font-weight: 800; white-space: nowrap; }
+.col-head .cs { font-size: 13px; font-weight: 500; color: var(--slate); white-space: nowrap; }
+.col-head .cn { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--slate); }
+.col.now .col-head { border-bottom-color: var(--ink); }
+.col .list { min-height: 56px; }
+.col.future .col-head .cd, .col.future .col-head .cn, .col.future .text { color: var(--mute); transition: color .15s; }
+.col.future .check { border-color: var(--line); transition: border-color .15s; }
+.col.future:hover .col-head .cd, .col.future:hover .text { color: var(--ink); }
+.col.future:hover .check { border-color: var(--mute); }
+.col-empty { padding: 14px 12px 6px; font-size: 14px; font-weight: 600; color: var(--slate); }
+.col-add {
+  display: block; width: 100%; height: 36px; margin-top: 2px; padding: 0 12px;
+  border: 0; border-radius: 9px; background: transparent; text-align: left;
+  color: var(--mute); font-size: 14px; font-weight: 600; cursor: pointer; opacity: 0; transition: opacity .15s;
+}
+.col:hover .col-add, .col-add:focus-visible { opacity: 1; }
+.col-add:hover { background: var(--wash); color: var(--ink); }
+
 /* Phone */
 @media (max-width: 760px) {
   .wrap { padding: 0 16px; }
@@ -499,6 +532,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
       <button class="next" id="nextUp" type="button" hidden></button>
     </div>
     <div class="list" id="todayList"></div>
+    <div class="board" id="board"></div>
     <button class="phrase-line" id="phraseLine" type="button" hidden>This week&rsquo;s phrase: <b id="phraseTerm"></b></button>
   </section>
   <section class="up-pane" aria-labelledby="upTitle">
@@ -910,6 +944,11 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
   const todayList = $('#todayList');
   const upcoming = $('#upcoming');
   let groupSortables = [];
+  const board = $('#board');
+  const wideMq = matchMedia('(min-width: 1100px)');
+  let boardSortables = [];
+  document.body.classList.toggle('wide', wideMq.matches);
+  wideMq.addEventListener('change', () => { document.body.classList.toggle('wide', wideMq.matches); render(); });
   let shownToday = '';
 
   /* Don't rebuild rows while a finger or mouse button is down, or the click would be lost */
@@ -945,6 +984,7 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
     }
     const keys = [...groups.keys()].sort((a, b) => (a === null) - (b === null) || String(a).localeCompare(String(b)));
     for (const k of keys) upcoming.appendChild(groupEl(k, groups.get(k).sort(openFirst)));
+    renderBoard();
     const upOpen = [...groups.values()].reduce((n, g) => n + g.filter((t) => !t.done).length, 0);
     $('#upCount').textContent = upOpen ? `${upOpen} to do` : '';
 
@@ -1017,6 +1057,76 @@ dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
   }
   document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => setView(t.dataset.view)));
   $('#nextUp').addEventListener('click', () => setView('upcoming'));
+
+  /* Desktop: today, then the next four working days. A weekend day only shows when something is on it. */
+  function boardDays() {
+    const days = [today];
+    let d = today, work = 0;
+    while (work < 4) {
+      d = addDays(d, 1);
+      const dow = parseYmd(d).getDay();
+      if (dow !== 0 && dow !== 6) { days.push(d); work++; }
+      else if (tasksFor(d).length) days.push(d);
+    }
+    return days;
+  }
+
+  function renderBoard() {
+    boardSortables.forEach((s) => s.destroy());
+    boardSortables = [];
+    if (!wideMq.matches) {
+      if (todayList.parentNode !== board.parentNode) board.before(todayList);   // back under the Today band
+      board.textContent = '';
+      return;
+    }
+    board.textContent = '';   // today's list lives in the first column, so this lifts it out too
+    const days = boardDays();
+    board.style.setProperty('--cols', days.length - 1);
+    for (const d of days) {
+      const items = tasksFor(d);
+      const open = items.filter((t) => !t.done).length;
+      const dd = parseYmd(d);
+      const col = document.createElement('section');
+      col.className = 'col ' + (d === today ? 'now' : 'future');
+      const head = document.createElement('div');
+      head.className = 'col-head';
+      const a = document.createElement('span'); a.className = 'cd';
+      const b = document.createElement('span'); b.className = 'cs';
+      const n = document.createElement('span'); n.className = 'cn';
+      a.textContent = d === today ? 'Today' : d === addDays(today, 1) ? 'Tomorrow' : DAY_NAMES[dd.getDay()];
+      b.textContent = d === today || d === addDays(today, 1) ? `${DAY_SHORT[dd.getDay()]} ${shortDate(d)}` : shortDate(d);
+      n.textContent = open ? String(open) : '';
+      head.append(a, b, n);
+      let list = todayList;                // the real today list, already filled by render()
+      if (d !== today) {
+        list = document.createElement('div');
+        list.className = 'list';
+        list.dataset.date = d;
+        fill(list, items);
+        boardSortables.push(new Sortable(list, sortableOptions()));
+      }
+      col.append(head, list);
+      if (d === today && !open) {
+        const e = document.createElement('div');
+        e.className = 'col-empty';
+        e.textContent = items.length ? 'All done.' : 'Nothing on today.';
+        col.appendChild(e);
+      }
+      const add = document.createElement('button');
+      add.type = 'button'; add.className = 'col-add'; add.dataset.date = d;
+      add.textContent = '+ Add';
+      add.setAttribute('aria-label', `Add a task to ${whenLabel(d)}`);
+      col.appendChild(add);
+      board.appendChild(col);
+    }
+  }
+  board.addEventListener('click', (e) => {
+    const b = e.target.closest('.col-add');
+    if (!b) return;
+    openSheet();
+    entryDate = b.dataset.date === today ? undefined : b.dataset.date;
+    updateWhen();
+  });
 
   function groupEl(date, items) {
     const g = document.createElement('div');
