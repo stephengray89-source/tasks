@@ -324,7 +324,17 @@ body.adding .toast { top: max(14px, env(safe-area-inset-top)); bottom: auto; }
 }
 .task.done .text { color: var(--mute); text-decoration: line-through; }
 .task.editing { cursor: auto; }
-.task.editing .face { background: var(--wash); }
+.task.editing .face { background: var(--wash); flex-wrap: wrap; }
+/* Notes: only a small mark on the row; the note itself shows when the task is opened */
+.has-note { flex: none; display: inline-flex; align-items: center; height: 22px; color: var(--mute); }
+.has-note svg { width: 15px; height: 15px; }
+.task.editing .has-note { display: none; }
+.note-edit {
+  flex: 1 0 calc(100% - 34px); margin: -2px 0 -4px 34px; padding: 4px 0;
+  border: 0; outline: 0; resize: none; overflow: hidden; background: transparent;
+  font: inherit; font-size: 15px; font-weight: 500; line-height: 21px; color: var(--slate);
+}
+.note-edit::placeholder { color: var(--mute); opacity: 1; }
 .task.editing .text { -webkit-user-select: text; user-select: text; }
 .since { flex: none; line-height: 22px; font-size: 13px; font-weight: 500; color: var(--slate); white-space: nowrap; }
 .late {
@@ -670,7 +680,7 @@ body.wide .board {
     <li>Swipe a task with a finger, or two fingers on a trackpad. <b>Left</b> ticks it off. <b>All the way right</b> pushes it to the next working day. <b>Halfway right</b> lets you pick a day.</li>
     <li>Drag a task to reorder it or move it to another day. Day buttons appear at the bottom while you drag. On a phone, press and hold first.</li>
     <li>Anything not done moves to today by itself. After three days it's marked overdue.</li>
-    <li>Click a task to edit it. Clear the text to delete it.</li>
+    <li>Click a task to edit it, or to add a note under it. A small mark shows which tasks have a note. Clear the text to delete the task.</li>
     <li>The app icon on your phone can show how many tasks you have today. Turn it on in Settings, from the Home Screen app.</li>
   </ul>
   <div class="row"><span class="spacer"></span><button class="btn primary" id="closeHelp" type="button">Got it</button></div>
@@ -861,6 +871,7 @@ body.wide .board {
       updatedAt: typeof t.updatedAt === 'string' ? t.updatedAt : created
     };
     if (isDate(t.doneAt)) out.doneAt = t.doneAt;
+    if (typeof t.note === 'string' && t.note.trim()) out.note = t.note;
     return out;
   }
   function loadLocal() {
@@ -938,7 +949,8 @@ body.wide .board {
   const ICON = {
     tick: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.3 5 8.6l4.5-5"/></svg>',
     cal: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>',
-    del: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m4 4 8 8M12 4l-8 8"/></svg>'
+    del: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m4 4 8 8M12 4l-8 8"/></svg>',
+    note: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 4.5h10M3 8h10M3 11.5h6"/></svg>'
   };
 
   const todayList = $('#todayList');
@@ -1177,6 +1189,14 @@ body.wide .board {
     text.className = 'text';
     text.textContent = t.text;
     face.append(check, text);
+    if (t.note) {
+      const mark = document.createElement('span');
+      mark.className = 'has-note';
+      mark.title = 'Has a note';
+      mark.setAttribute('aria-label', 'Has a note');
+      mark.innerHTML = ICON.note;
+      face.appendChild(mark);
+    }
     if (!t.done && t.date && t.date < today) {
       const n = daysBetween(t.date, today);
       const tag = document.createElement('span');
@@ -1444,6 +1464,19 @@ body.wide .board {
     try { el.contentEditable = 'plaintext-only'; } catch { el.contentEditable = 'true'; }
     if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true';
     el.setAttribute('enterkeyhint', 'done');
+
+    // The note sits under the task while it's open
+    const face = row.querySelector('.face');
+    const note = document.createElement('textarea');
+    note.className = 'note-edit';
+    note.rows = 1;
+    note.placeholder = 'Add a note';
+    note.setAttribute('aria-label', 'Note');
+    note.value = t.note || '';
+    face.appendChild(note);
+    const grow = () => { note.style.height = 'auto'; note.style.height = `${note.scrollHeight}px`; };
+    grow();
+
     el.focus();
     const r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
     const s = getSelection(); s.removeAllRanges(); s.addRange(r);
@@ -1453,15 +1486,24 @@ body.wide .board {
       if (finished) return;
       finished = true;
       el.removeEventListener('keydown', onKey);
-      el.removeEventListener('blur', onBlur);
+      note.removeEventListener('keydown', onNoteKey);
+      note.removeEventListener('input', grow);
+      row.removeEventListener('focusout', onLeave);
       el.contentEditable = 'false';
+      const noteValue = note.value.trim();
+      note.remove();
       row.classList.remove('editing');
       row._finish = null;
       editingId = null;
       const value = el.textContent.replace(/\s+/g, ' ').trim();
       const cur = tasks.get(t.id);
       if (save && cur && !value) { deleteWithUndo(cur); return; }
-      if (save && cur && value !== cur.text) { cur.text = value; commit(cur); return; }
+      if (save && cur && (value !== cur.text || noteValue !== (cur.note || ''))) {
+        cur.text = value;
+        if (noteValue) cur.note = noteValue; else delete cur.note;
+        commit(cur);
+        return;
+      }
       if (cur) el.textContent = cur.text;
       render();
     };
@@ -1469,9 +1511,17 @@ body.wide .board {
       if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); finish(true); }
       else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
     };
-    const onBlur = () => finish(true);
+    const onNoteKey = (e) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); finish(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    };
+    // Moving between the task and its note keeps it open; anywhere else closes and saves.
+    // Checked a moment later, so a tap on another task lands before the list redraws.
+    const onLeave = () => setTimeout(() => { if (!row.contains(document.activeElement)) finish(true); }, 0);
     el.addEventListener('keydown', onKey);
-    el.addEventListener('blur', onBlur);
+    note.addEventListener('keydown', onNoteKey);
+    note.addEventListener('input', grow);
+    row.addEventListener('focusout', onLeave);
     row._finish = finish;
   }
 
@@ -1505,7 +1555,11 @@ body.wide .board {
       if (cur) toggleDone(cur);
       return;
     }
-    if (!row.classList.contains('editing')) startEdit(row);
+    if (row.classList.contains('editing')) return;
+    const open = main.querySelector('.task.editing');
+    if (open && open._finish) open._finish(true);      // close the task that was open first
+    const fresh = main.querySelector(`.task[data-id="${t.id}"]`);
+    if (fresh) startEdit(fresh);
   });
 
   document.addEventListener('keydown', (e) => {
@@ -1720,6 +1774,7 @@ body.wide .board {
     const clean = list.map((t) => {
       const o = { id: t.id, text: t.text, date: t.date, done: t.done, order: t.order, createdAt: t.createdAt, updatedAt: t.updatedAt };
       if (t.doneAt) o.doneAt = t.doneAt;
+      if (t.note) o.note = t.note;
       return o;
     });
     return JSON.stringify({ version: 1, tasks: clean }, null, 2) + '\n';
